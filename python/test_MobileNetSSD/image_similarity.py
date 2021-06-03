@@ -1,9 +1,20 @@
 """
+** Création de l'environnement virtuel **
+py -m pip install --upgrade pip 
+py -m venv scanImg
+** Installation des paquets : tensorflow et tensorflow-gpu version 2.5.0 **
+.\scanImg\Scripts\activate
+pip install imagededup
+pip install tensorflow-gpu
+
+** Pour exécuter le code : **
+.\scanImg\Scripts\activate
 D:
 cd D:\M2_IARF\_Stage\MobileNetSSD
+py image_similarity.py nomDossierImages SITE
 Exemples pour lancer le script : 
-    python image_similarity.py Biodicam_IMG
-    python image_similarity.py 2021-02-28-FRANCON
+    py image_similarity.py Biodicam_IMG UPS
+    py image_similarity.py 2021-02-28 FRANCON
 """
 # https://idealo.github.io/imagededup/methods/cnn/
 # https://idealo.github.io/imagededup/user_guide/finding_duplicates/
@@ -18,7 +29,7 @@ import shutil
 import time
 
 # Créé des sous-dossiers pour chaque jour différent avec les images correspondantes
-def createFolders_FindSimilarities(image_dir, seuil):
+def createFolders_FindSimilarities(image_dir, seuil, location):
     # Parcours des images
     for img in os.listdir(image_dir):
         current_folder = image_dir + img
@@ -27,7 +38,7 @@ def createFolders_FindSimilarities(image_dir, seuil):
         if ext == '.jpg':
             current_date = img.split('-')[0]
             # Créé le dossier associé à la date courante (s'il n'existe pas déjà)
-            newImage_folder = image_dir + 'task_' + current_date
+            newImage_folder = image_dir + 'task_' + current_date + '_' + location
             Path(newImage_folder).mkdir(parents=True, exist_ok=True)
             # Et déplace toutes les images du jour courant dans le sous-dossier créé
             shutil.move(current_folder, newImage_folder)
@@ -56,6 +67,7 @@ def trierDuplicates(image_dir, seuil):
             shutil.move(image_dir + imgName, trash_folder_path + imgName)
 
 # Move files into subdirectories
+"""
 def move_files(abs_dirname, N):
     root = Path(abs_dirname).parent.absolute()
     current_dateDir = abs_dirname.split('\\')[-1] + "_"
@@ -78,6 +90,7 @@ def move_files(abs_dirname, N):
         i += 1
     # Une fois que l'on a crée les sous-dossiers pour la task courante, on supprime le dossier de cette task (exemple : task_20210409) car il est vide
     shutil.rmtree(abs_dirname)
+"""
 
 def parse_args():
     """ Paramètre à passer lorsqu'on lance le programme : 
@@ -88,6 +101,7 @@ def parse_args():
     # TODO lien absolu pour éviter de placer le fichier python juste avant le bon dossier ? + ligne 134 du main
     parser = argparse.ArgumentParser(description='Split files into multiple subfolders.')
     parser.add_argument('src_dir', help='repertoire source')
+    parser.add_argument('location', help='site\'s location')
     return parser.parse_args()
 
 def countAndDeleteBadImages(image_dir):
@@ -95,10 +109,10 @@ def countAndDeleteBadImages(image_dir):
     goodImages = 0; badImages = 0; totalGood = 0; totalBad = 0; i = 0; cheminSupprImages = ""
     for folder in os.listdir(image_dir):
         goodImages = len(os.listdir(image_dir + folder)) - 1
+        # TODO : check si une image gardée n'est pas illisible, sinon on la supprime ! car on aura un problème sur CVAT sinon
         totalGood += goodImages
         print("Folder : ", folder, " -> ", goodImages, " images gardées")
         currentFolder = image_dir + folder
-
         # Parcours des sous-dossiers et recherche du dossier 'trash'
         for root, dirs, files in os.walk(image_dir + folder):  # TODO comme ça et suppr le for au dessus
             for dir in dirs:
@@ -111,26 +125,37 @@ def countAndDeleteBadImages(image_dir):
         # Une fois que l'on a supprimé toutes les mauvaises images, on supprime le dossier 'trash' avec les images trop similaires
         if os.path.exists(cheminSupprImages):
             shutil.rmtree(cheminSupprImages)
-        # Ensuite, on déplace les images sauvegardées pour créer des paquets de 100 et les uploader sur Gitlab !
-        # On créé des paquets de 100 images, qui sont triées par date
+        # Ensuite, on déplace les images sauvegardées pour les uploader sur Gitlab !
+        # Ces images triées par date sont découpées automatiquement en N jobs de 100 images par task (= par jour)
+        """
         if len(os.listdir(currentFolder)) > 100:
             # Création des sous-dossiers pour les paquets de 100 images
             N = 100  # nombre d'images par sous-dossier
             move_files(os.path.abspath(currentFolder), N)
             i += 1   
+        """
     print("Nombre total d'images gardées : ", totalGood, " sur ", totalBad+totalGood, " soit ", (totalGood/(totalBad+totalGood))*100, "%")
 
 def main():
     args = parse_args()
     src_dir = args.src_dir
+    location = args.location
     # Gère le cas où le dossier n'existe pas / mauvais chemin
     if not os.path.exists(src_dir):
         raise Exception('Directory does not exist ({0}).'.format(src_dir))
 
     image_dir = os.getcwd() + "\\" + src_dir + "\\"
-    # seuil de similarité pour restreindre beaucoup, sinon 0.90 ou 0.95 pour ne pas manquer d'oiseau
-    seuil = 0.90  # 0.2 ou 0.4 à 0.5 si on veut restreindre davantage sur les 23000 images de l'UPS
-    createFolders_FindSimilarities(image_dir, seuil)
+    # seuil de similarité : 0.90 ou 0.95 pour ne pas manquer d'oiseau 
+    # mais attention aux valeurs trop grandes qui autorisent des changements minimes ...
+    nbImages = os.listdir(image_dir)
+    seuil = 0.0
+    # Cette valeur est le seuil minimum de similarité entre 2 images pour que l'image candidate soit considérée comme un doublon
+    if nbImages > 5000:
+        seuil = 0.20  # 20% de similarité entre les 2 => doublon (donc on fait un grand tri en gardant les images à 80% différentes)
+    else:
+        seuil = 0.90  # On ne veut pas de doublon purs mais on autorise une différence de 10% seulement pour ne pas manquer d'oiseau (moins restrictif)
+
+    createFolders_FindSimilarities(image_dir, seuil, location)
     countAndDeleteBadImages(image_dir)
 
 if __name__ == '__main__':
