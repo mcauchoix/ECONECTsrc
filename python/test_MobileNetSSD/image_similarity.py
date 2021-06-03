@@ -1,13 +1,17 @@
 """
-** Création de l'environnement virtuel **
+**** Création de l'environnement virtuel sous Windows ****
 py -m pip install --upgrade pip 
 py -m venv scanImg
-** Installation des paquets : tensorflow et tensorflow-gpu version 2.5.0 **
+**** Installation des paquets : tensorflow et tensorflow-gpu version 2.5.0 ****
 .\scanImg\Scripts\activate
+pip install Pillow
 pip install imagededup
-pip install tensorflow-gpu
+pip install tensorflow-gpu (ou tensorflow si on n'a pas de GPU Nvidia)
 
-** Pour exécuter le code : **
+****
+   Pour exécuter le code, il faut placer le script python,
+   dans le répertoire parent du dossier qui contient les images à traiter : 
+****
 .\scanImg\Scripts\activate
 D:
 cd D:\M2_IARF\_Stage\MobileNetSSD
@@ -19,6 +23,7 @@ Exemples pour lancer le script :
 # https://idealo.github.io/imagededup/methods/cnn/
 # https://idealo.github.io/imagededup/user_guide/finding_duplicates/
 from imagededup.methods import CNN
+from PIL import Image
 import tensorflow as tf
 import warnings
 warnings.filterwarnings("ignore") #ignore les warnings de tensorflow dus aux différentes versions
@@ -27,6 +32,14 @@ import os
 from pathlib import Path
 import shutil
 import time
+
+# Cherche et supprime les images illisibles (qui ont eu un problème)
+def findAndDeleteBadImages(image_dir):
+    for img in os.listdir(image_dir):
+        try:
+            Image.open(img).load()
+        except OSError:
+            os.remove(image_dir + '\\' + img)
 
 # Créé des sous-dossiers pour chaque jour différent avec les images correspondantes
 def createFolders_FindSimilarities(image_dir, seuil, location):
@@ -59,7 +72,6 @@ def trierDuplicates(image_dir, seuil):
         # Et on fait le scan uniquement si on ne l'a pas déjà fait
         duplicates = cnn.find_duplicates_to_remove(image_dir=image_dir, encoding_map=encodings,
                                                    min_similarity_threshold=seuil)
-        nbDupliquees = len(duplicates)
         # Créé le sous-dossier pour stocker les images dupliquées
         os.makedirs(trash_folder_path)
         # Déplace les images dupliquées
@@ -134,7 +146,10 @@ def countAndDeleteBadImages(image_dir):
             move_files(os.path.abspath(currentFolder), N)
             i += 1   
         """
-    print("Nombre total d'images gardées : ", totalGood, " sur ", totalBad+totalGood, " soit ", (totalGood/(totalBad+totalGood))*100, "%")
+    nbTotalImg = totalBad + totalGood
+    # Si on a un dossier non vide
+    if nbTotalImg > 0:
+        print("Nombre total d'images gardées : ", totalGood, " sur ", totalBad+totalGood, " soit ", (totalGood/nbTotalImg)*100, "%")
 
 def main():
     args = parse_args()
@@ -147,7 +162,7 @@ def main():
     image_dir = os.getcwd() + "\\" + src_dir + "\\"
     # seuil de similarité : 0.90 ou 0.95 pour ne pas manquer d'oiseau 
     # mais attention aux valeurs trop grandes qui autorisent des changements minimes ...
-    nbImages = os.listdir(image_dir)
+    nbImages = len(os.listdir(image_dir))
     seuil = 0.0
     # Cette valeur est le seuil minimum de similarité entre 2 images pour que l'image candidate soit considérée comme un doublon
     if nbImages > 5000:
@@ -155,6 +170,7 @@ def main():
     else:
         seuil = 0.90  # On ne veut pas de doublon purs mais on autorise une différence de 10% seulement pour ne pas manquer d'oiseau (moins restrictif)
 
+    findAndDeleteBadImages(image_dir)
     createFolders_FindSimilarities(image_dir, seuil, location)
     countAndDeleteBadImages(image_dir)
 
