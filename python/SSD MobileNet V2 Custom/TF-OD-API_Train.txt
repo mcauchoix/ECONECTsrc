@@ -147,7 +147,9 @@ python .\exporter_main_v2.py ^
   --output_directory .\exported-models\my_mobilenet_model
 
 # Ensuite => conversion en TF Lite :
-python convert_to_tflite.py --model exported_models/my_mobilenet_model/saved_model --output TFLite_model
+python convert-to-tflite.py ^
+  --model exported_models/my_mobilenet_model/saved_model ^
+  --output TFLite_model
 
 # Evaluation du modèle :
 python model_main_tf2.py ^
