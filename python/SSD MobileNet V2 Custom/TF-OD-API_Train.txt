@@ -122,6 +122,7 @@ copy C:\tf2\workspace\training_demo\pre-trained-models\ssd_mobilenet_v2_fpnlite_
 
 ****************************************************************************************************************
 **** Pour chaque script ci-dessous, on doit d'abord lancer les 2 prochaines commandes sur un SHELL Anaconda ****
+                              **** sauf pour la conversion en TF Lite ****
 ****************************************************************************************************************
 conda activate tf2
 cd C:\tf2\workspace\training_demo
@@ -137,27 +138,38 @@ python model_main_tf2.py ^
 tensorboard --logdir=models\my_ssd_mobilenet_v2_fpnlite
 
 ****************************************************************************************************************
-**** Après l'entrainement ****
+**** Après l'entrainement : Exporter le modèle en TF Lite ****
 ****************************************************************************************************************
-# Exporter le modèle final en TF2 :
-python .\exporter_main_v2.py ^
-  --input_type image_tensor ^
-  --pipeline_config_path .\models\my_ssd_mobilenet_v2_fpnlite\pipeline.config ^
-  --trained_checkpoint_dir .\models\my_ssd_mobilenet_v2_fpnlite\ ^
-  --output_directory .\exported-models\my_mobilenet_model
+# Pour cela, suivre le tutoriel suivant : https://github.com/armaanpriyadarshan/TensorFlow-2-Lite-Object-Detection-on-the-Raspberry-Pi/blob/main/TFLite-Conversion.md
 
-# Ensuite => conversion en TF Lite :
+conda activate tf2
+cd C:\tf2\workspace\training_demo
+
+python export_tflite_graph_tf2.py ^
+  --pipeline_config_path models\my_ssd_mobilenet_v2_fpnlite_3\pipeline.config ^
+  --trained_checkpoint_dir models\my_ssd_mobilenet_v2_fpnlite_3 ^
+  --output_directory exported-models\my_tflite_model
+
+# Changement d'environnement virtuel
+conda activate tflite
+cd C:\tf2\workspace\training_demo
+
 python convert-to-tflite.py ^
-  --model exported_models/my_mobilenet_model/saved_model ^
-  --output TFLite_model
+  --model exported-models\my_tflite_model\saved_model ^
+  --output exported-models\my_tflite_model
 
-# Evaluation du modèle :
+****************************************************************************************************************
+**** Evaluation du modèle ****
+****************************************************************************************************************
 python model_main_tf2.py ^
   --pipeline_config_path models\my_ssd_mobilenet_v2_fpnlite\pipeline.config ^
   --model_dir models\my_ssd_mobilenet_v2_fpnlite ^
   --checkpoint_dir models\my_ssd_mobilenet_v2_fpnlite ^
   --alsologtostderr
 
+****************************************************************************************************************
+**** Inférence du modèle ****
+****************************************************************************************************************
 # Inférence avec notre script personnalisé qui permet de comparer les boxes prédites et les annotations, avec l'affichage des classes prédites/annotées
 # Notre script fournit aussi le comptage du nombre d'images par espèce en TRAIN et en TEST
 python tf2_inference_OD_model.py
