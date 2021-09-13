@@ -215,7 +215,6 @@ def run_inference_for_single_image(model, image, elapsed_time):
   # detection_classes should be ints.
   output_dict['detection_classes'] = output_dict['detection_classes'].astype(np.int32)
 
-  """
   # Récupère les coordonnées des boxes prédites : https://stackoverflow.com/questions/48915003/get-the-bounding-box-coordinates-in-the-tensorflow-object-detection-api-tutorial
   boxes = output_dict['detection_boxes'][0]
   # get all boxes from an array
@@ -235,8 +234,8 @@ def run_inference_for_single_image(model, image, elapsed_time):
               "class_name": class_name,
               "score": scores[i]
           })
-  print(coordinates)  # TODO JSON pour calculer les métriques ???
-  """
+  
+  #print(coordinates)  # TODO JSON pour calculer les métriques ???
 
   return output_dict, elapsed_time
 
@@ -270,8 +269,6 @@ def show_inference_perso(model, image_path, threshold, saveImg, espece):
         agnostic_mode=False)
 
     # Affichage des vérités terrain == annotations ou groundtruths
-    fig, ax = plt.subplots()
-
     for gt in groundtruths:
       # Extrait les 4 coordonnées pour chaque box
       ymin, xmin, ymax, xmax, species = gt
@@ -285,7 +282,45 @@ def show_inference_perso(model, image_path, threshold, saveImg, espece):
           thickness=2,
           use_normalized_coordinates=False)
 
+    #TODO
+    img_annotee = Image.fromarray(np.uint8(image_np_with_annotations)).convert('RGB')
+    draw = ImageDraw.Draw(img_annotee)
+    for gt in groundtruths:
+      ymin, xmin, ymax, xmax, species = gt
+      (left, right, top, bottom) = (xmin, xmax, ymin, ymax)
+      marginRight = 145
+      marginBottom = 30
+      """
+      draw.rectangle(
+          [(right, bottom), (right, bottom)],
+          outline='red', fill='red')
+      """
+      draw.text(
+          (right-marginRight, bottom-marginBottom),
+          species,
+          fill='white',
+          font = ImageFont.truetype("arial.ttf", 28))
+
+    #img_annotee.show()
+    #input('W8')
+    # Copie les changements sur l'image avec les prédictions
+    np.copyto(image_np_with_annotations, np.array(img_annotee)) 
+
+    # Affichage des labels en légende
+    plt.legend(handles=handles)
+
+    # Affichage ou sauvegarde des résultats
+    if saveImg:
+      # Créé un dossier pour sauvegarder l'espèce courante
+      if not os.path.exists(espece):
+        os.makedirs(espece)
+      # Sauvegarde de l'image dans le dossier de l'espèce courante
+      # Le dossier de la sauvegarde est situé au même endroit que ce programme Python !
+      plt.imsave(espece + '\\' + image_name, image_np_with_annotations)
+    else:
+      """
       # Ajoute les vérités terrains des annotations, dans des rectangles en haut à droite des boxes annotées
+      fig, ax = plt.subplots()
       (left, right, top, bottom) = (xmin, xmax, ymin, ymax)
 
       # Positionne le rectangle dans le coin supérieur droit
@@ -300,19 +335,8 @@ def show_inference_perso(model, image_path, threshold, saveImg, espece):
       cy = ry + rect.get_height()/2.0
       ax.annotate(species, (cx, cy), color='black', weight='bold', 
                   fontsize=10, ha='center', va='center')
+      """
 
-    # Affichage des labels en légende
-    plt.legend(handles=handles)
-
-    # Affichage ou sauvegarde des résultats
-    if saveImg:
-      # Créé un dossier pour sauvegarder l'espèce courante
-      if not os.path.exists(espece):
-        os.makedirs(espece)
-      # Sauvegarde de l'image dans le dossier de l'espèce courante
-      # Le dossier de la sauvegarde est situé au même endroit que ce programme Python !
-      plt.imsave(espece + '\\' + image_name, image_np_with_annotations)
-    else:
       # Affichage de l'image et des oiseaux reconnus avec leurs scores en plein écran
       wm = plt.get_current_fig_manager()
       wm.window.state('zoomed')
@@ -348,11 +372,8 @@ def inference_random_N_Images_Especes(seuil, species_images, saveImg=None, espec
     mean_elapsed = sum(elapsed_time) / float(len(elapsed_time))
     print('Elapsed time: ' + str(mean_elapsed) + ' second per image')
 
-  #except ZeroDivisionError:
-    #print('Le label : ', espece ,' est présent dans le fichier labelmap.txt est présent mais ne devrait pas y être !')
-
 #########################################################################
-######################### Partie  pour les tests #########################
+######################### Partie  pour les tests ########################
 #########################################################################
 #########################################################################
 # Chemins vers nos fichiers
@@ -362,7 +383,10 @@ current_dir = os.getcwd()
 test_images_dir = current_dir + '\\images\\test\\'
 train_record_path = current_dir + '\\annotations\\train.record'
 test_record_path = current_dir + '\\annotations\\test.record'
-labelmap_path = current_dir + '\\annotations\\labelmap.pbtxt'  # la labelmap d'entrainement sous forme d'objets
+
+labelmap_name = 'labelmap_12especes.pbtxt' # si on a les MESCHA : TrainV2 à V4 et TrainV6
+#labelmap_name = 'labelmap_sansMESCHA.pbtxt' # TrainV5 => TODO param  of program !
+labelmap_path = current_dir + '\\annotations\\' + labelmap_name  # la labelmap d'entrainement sous forme d'objets
 
 #########################################################################
 # Récupération des labels pour nos classes
@@ -390,7 +414,10 @@ handles.append(mpatches.Patch(color='red', label='Labels'))
 # Récupération de notre modèle CUSTOM
 #########################################################################
 tf.keras.backend.clear_session()
-exported_model_folder = "exported-models\\my_mobilenet_model_2\\saved_model"
+# TODO param of program !
+#exported_model_name = 'TF2_ExportedModel_TrainV8'
+exported_model_name = 'SSD_320x320_trainV2'
+exported_model_folder = "exported-models\\" + exported_model_name + "\\saved_model"
 model = tf.saved_model.load(current_dir + '\\' + exported_model_folder)
 
 #########################################################################
@@ -433,55 +460,34 @@ def N_random_per_species(N_images, saveImg=None):
         inference_random_N_Images_Especes(seuil, N_images_espece, saveImg, espece)
       else:
         # Ne sauvegarde pas les images avec les boxes prédites et annotées => affichage graphique des résultats
-        inference_random_N_Images_Especes(seuil, N_images_espece, None, espece)
+        inference_random_N_Images_Especes(seuil, N_images_espece)
+        # TODO prendre une liste d'images en entrée : ex => tous les MOIDOM_A à 1 dans le dataframe pandas
+        # TODO : possibilité de choisir une liste d'img ['2021-06-12-06-09-15.jpg', '2021-06-12-06-27-31.jpg', '2021-06-12-06-27-31.jpg'] au lieu de N_images_espece
+        # 3 MESCHA : ['2021-06-12-06-09-15.jpg', '2021-06-12-06-27-31.jpg', '2021-06-12-06-27-31.jpg']
+        # 4 MESCHA : ['2021-06-12-06-10-03.jpg']
+        # Les 3 MOIDOM : ['20210227-115654_(8.0).jpg', '20210227-115733_(6.0).jpg', '20210301-090723_(9.0).jpg']
+        # 3 MESCHA en inférence pour comparer les SSD : ['2021-06-12-06-10-07.jpg']
+        #inference_random_N_Images_Especes(seuil, ['2021-06-12-06-10-03.jpg', '2021-06-12-06-10-07.jpg'])
+
 
 # TODO : passer en argument du programme les paramètres
 #N_images = 10
 N_images = len(os.listdir(test_images_dir))  # si on veut le faire sur toutes les images de test
-#N_random_per_species(N_images, True) # si on sauvegarder les images avec les boxes prédites/annotées
 N_random_per_species(N_images)  # sans sauvegarder les résultats de l'inférence
+#N_random_per_species(N_images, True) # si on sauvegarder les images avec les boxes prédites/annotées
 
-#########################################################################
-# Moyenne de temps d'execution sur GPU pour 5 images :
-#########################################################################
-""" Elapsed time: 0.03820490837097168 second per image """
 
-# PRIO 1 !
-"""
-OK // Tableau métriques AP, nb_images TRAIN, nb_images TEST ; avoir la précision/recall  
-OK // SAVE MESCHA, ecurou, mesble, vereur predictions sur toutes les images dispos
-OK // courbes LOSS trainV2
-
-Regarder si notre modèle peut fonctionner sur RPi en s'inspirant de ces tutos officiels :
-https://github.com/tensorflow/models/blob/master/research/object_detection/colab_tutorials/eager_few_shot_od_training_tflite.ipynb
-https://github.com/tensorflow/models/blob/master/research/object_detection/g3doc/running_on_mobile_tf2.md
-"""
-
-# TODO : Evaluer selon chaque espèce, selon le sexe, ...
-# ==> avec plusieurs matrices de confusions ?
-# ==> Pour évaluer selon espèces => données triées avec train_test_split()
-#     même méthode si on veut évaluer les données selon le sexe ? => !!! trier les sexes "unknown" comme pour les espèces dans xml_to_csv.py
-
+""" Elapsed time: 0.03820490837097168 second per image sur GPU """
 # ==> Données de validation ? pour voir les val_loss et acc_loss sur Tensorboard et détecter l'overfitting ?
 # train_test_split() mélange aléatoirement toutes les données avant de les séparer en 2 groupes : TRAIN et TEST
-# TODO : Comparer les métriques obtenues avec train_test_split() VS K-Fold qui permet d'avoir différents "jours" en TRAIN et en TEST
-
-# TODO Vérif :
+# ==> Comparer les métriques obtenues avec train_test_split() VS K-Fold qui permet d'avoir différents "jours" en TRAIN et en TEST
+"""
+Accuracy, IoU, globale, par espèces, par attribut: sex, behaviour..., avec différent training design: kfold sur les jours/site, random etc...)
+# ==> Pour évaluer selon espèces => données triées avec train_test_split()
+#     même méthode si on veut évaluer les données selon le sexe ? => !!! trier les sexes "unknown" comme pour les espèces dans xml_to_csv.py
+# => Plusieurs TRAIN ==> scripts CALMIP ?
+"""
+# TODO corriger annotations :
 # 2021-01-05-16-15-17.jpg ça aussi c'est une bleu
 # ça 2021-01-06-12-12-47.jpg ça ressemble effectivement plus à de la bleu
 # sur 2021-01-06-11-12-29.jpg
-
-# Compute IoU manually from BBox coordinates : # https://towardsdatascience.com/intersection-over-union-iou-calculation-for-evaluating-an-image-segmentation-model-8b22e2e84686  
-                                               # https://stackoverflow.com/questions/25349178/calculating-percentage-of-bounding-box-overlap-for-image-detector-evaluation
-                                               # OU  https://www.pyimagesearch.com/2016/11/07/intersection-over-union-iou-for-object-detection/
-# ==> Détails métrique mAP  :  cf OneNote
-# TODO : Exporter la commande en sortie dans un fichier texte puis PARSER et créer un tableau Excel (ou autre) à partir des métriques en console
-# soit je copie colle la console et je parse le fichier
-# ou je le fais à la main si on a peu de métriques : Recall, Precision, IoU -> TODO CoCo à éclaircir
-# comment les scores de confiance sont calculés % à l'IoU ?
-
-"""
-Accuracy, IoU, globale, par espèces, par attribut: sex, behaviour..., avec différent training design: kfold sur les jours/site, random etc...)
-==> On a l'IoU globale et le mAP (cf image paint)
-=> Plusieurs TRAIN ==> scripts CALMIP ?
-"""

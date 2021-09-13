@@ -8,9 +8,12 @@ from tqdm import tqdm
 from xml.etree import ElementTree
 from shutil import copyfile
 
+# TODO ajouter UN PARAM DE PROG pour => MESCHA, ... etc si on souhaite les exclure de l'entrainement & random_state value
+liste_especes = []
+
 def ignore_badLabels(root):
     # On ignore ces labels pour notre jeu de données
-    unwanted_labels = ['noBird', 'human', 'unknown', 'MESCHA']  # ajouter MESCHA si on souhaite les exclure de l'entrainement
+    unwanted_labels = ['noBird', 'human', 'unknown']
     # Recherche de la présence d'un oiseau ou d'un label non souhaité
     names = root.findall('.//attribute/name')
     values = root.findall('.//attribute/value')
@@ -19,6 +22,11 @@ def ignore_badLabels(root):
     # Recherche d'un label non souhaité
     # True si on a une espèce indésirée, False sinon
     for i in indices :
+        # Collecte toutes les espèces uniques
+        if values[i].text not in liste_especes and values[i].text not in unwanted_labels:
+            liste_especes.append(values[i].text)
+
+        # Si c'est une espèce non souhaitée, on ne la garde pas
         if values[i].text in unwanted_labels:
             return True
     return False
@@ -37,7 +45,7 @@ def detectBadAnnotations(chemin):
             # alors cette image est incorrecte pour notre dataset
             if not root.findall('.//bndbox') or ignore_badLabels(root):
                 # on garde juste les noms sans extension
-                invalid_files.append(filename[:-4])
+                invalid_files.append(filename)
     return invalid_files
 
 # Lecture des arguments passés au programme en ligne de commande
@@ -62,23 +70,21 @@ TEST_SET_SIZE = float(args.testsize)
 
 # Vérifie qu'il ne manque pas d'annotations dans nos .xml pour TRAIN et TEST :
 invalid_files = detectBadAnnotations(ANNOTATIONS)
-print('On ignore les images avec des annotations indésirables : ', len(invalid_files))
+print('\nOn ignore les images avec des annotations indésirables : ', len(invalid_files))
+print('Liste des espèces présentes : ', liste_especes)   # TODO automatiser labelmap ?
 
 # create train and test directories
 if not os.path.isdir(os.path.join(OUTPUT_DIR, "train")):
     os.makedirs(os.path.join(OUTPUT_DIR, "train"))
-    print("\nCreated {} directory\n".format(os.path.join(OUTPUT_DIR, "train")))
+    print("Created {} directory".format(os.path.join(OUTPUT_DIR, "train")))
 
 if not os.path.isdir(os.path.join(OUTPUT_DIR, "test")):
     os.makedirs(os.path.join(OUTPUT_DIR, "test"))
-    print("\nCreated {} directory\n".format(os.path.join(OUTPUT_DIR, "test")))
+    print("Created {} directory".format(os.path.join(OUTPUT_DIR, "test")))
 
-# get annotations only ending with '.xml'
-annots = []
-for filename in os.listdir(ANNOTATIONS):
-    # On ne copie que les images avec leurs annotations qui correspondent à nos classes souhaitées, sinon on les ignore
-	if filename.endswith('.xml') and filename[:-4] not in invalid_files :
-		annots.append(filename)
+# On ne copie que les annotations souhaitées, sinon on les ignore
+liste_annotations = os.listdir(ANNOTATIONS)
+annots = [item for item in liste_annotations if item not in invalid_files]
 
 # split the data into test and train
 X = y = annots
@@ -116,4 +122,4 @@ for f in X_test:
     except:
         bad_files += 1
 
-print("\n\nBad files count: ", bad_files)
+print("\n\nBad files count: ", bad_files) 

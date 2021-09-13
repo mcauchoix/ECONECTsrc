@@ -1,0 +1,216 @@
+  Followed tutorial :
+  https://tensorflow-object-detection-api-tutorial.readthedocs.io/en/latest/training.html
+  (from https://github.com/sglvladi/TensorFlowObjectDetectionTutorial)
+  
+  ****************************************************************************************************************
+  ********** Installation de l'environment virtuel et des dépendances, à n'éxecuter qu'une seule FOIS ! **********
+  ****************************************************************************************************************
+  conda create -n tf2 pip python=3.8
+  conda activate tf2
+  pip install tensorflow-gpu  # =2.5.0 pour le GPU de Florent
+
+  mkdir C:\tf2
+  cd C:\tf2
+  git clone https://github.com/tensorflow/models.git
+
+  conda install -c anaconda protobuf
+  cd models\research
+  protoc object_detection\protos\*.proto --python_out=.
+  => * Fermer ce terminal et en ouvrir un nouveau ! *
+
+  conda activate tf2
+  pip install cython
+  pip install git+https://github.com/philferriere/cocoapi.git#subdirectory=PythonAPI
+  
+  cd C:\tf2\models\research
+  copy object_detection\packages\tf2\setup.py .
+  python -m pip install .
+  
+  # Afin d'éviter une erreur de compilation quand on veut évaluer le modèle avec COCO et PASCAL VOC 2010 
+  pip install numpy==1.17.3 --user
+  pip install IPython
+  pip install seaborn
+
+  # Teste si l'installation s'est bien déroulée :
+  python object_detection\builders\model_builder_tf2_test.py
+ 
+  # Création des dossiers contenant les fichiers d'entrainement et les images
+  cd C:\tf2
+  git clone https://github.com/armaanpriyadarshan/Training-a-Custom-TensorFlow-2.X-Object-Detector
+  move Training-a-Custom-TensorFlow-2.X-Object-Detector\scripts .
+  move Training-a-Custom-TensorFlow-2.X-Object-Detector\workspace .
+  rd /s /q Training-a-Custom-TensorFlow-2.X-Object-Detector
+  del /q workspace\training_demo\images\*
+  del /q workspace\training_demo\annotations\*
+  rmdir /s /q workspace\training_demo\images\
+  mkdir workspace\training_demo\images
+
+  ****************************************************************************************************************
+  ****************************************************************************************************************
+
+  ****************************************************************************************************************
+  ************************ Phase de préparation du dataset pour l'entraînement du réseau *************************
+  ****************************************************************************************************************
+  
+  # Clone Gitlab puis déplacer le dossier "raw_data" dans "workspace\training_demo\images"
+  Windows ==> Xcopy /E /I C:\Users\Flo\Documents\M2_IARF\_Stage\Gitlab\p0133_bird_data\raw_data C:\tf2\workspace\training_demo\images
+  Linux ==> cp dossierSource dossierDestination
+
+  # Supprime l'image illisible à la racine
+  cd C:\tf2\workspace\training_demo\images
+  del /f 2021-01-19-13-43-29.jpg
+
+  # Vérifier qu'il n'y ait pas d'autres images illisibles sinon on les supprime
+  for /r %F in (*) do @if %~zF==0 del "%F"
+
+  # DEPLACE toutes les images dans le dossier "JPEGImages"
+  mkdir JPEGImages
+  FOR /R "C:\tf2\workspace\training_demo\images" %i IN (*.jpg) DO MOVE "%i" "C:\tf2\workspace\training_demo\images\JPEGImages"
+  # Supprime les dossiers vides
+  for /d /r %d in (*.*) do rd "%d"
+
+  # Démarche pour cloner les annotations en format PASCAL VOC 1.1 puis
+  # COPIE les fichiers XML du dossier cloné "annotations" dans un dossier "Annotations" (et supprimer les dossiers vides)
+  mkdir Annotations
+  FOR /R "C:\Users\Flo\Documents\M2_IARF\_Stage\Gitlab\python-cvatclient\annotations" %i IN (*.xml) DO COPY "%i" "C:\tf2\workspace\training_demo\images\Annotations"
+
+  # Copier les fichiers "train_test_splitter.py" et "xml_to_csv.py" sont bien dans "scripts\preprocessing"
+
+  ****************************************************************************************************************
+  ************************** Phase de d'échantillonnage des données pour l'entraînement **************************
+  ****************************************************************************************************************
+
+  **** Sur un Shell Anaconda ****
+  conda activate tf2
+  cd C:\tf2\scripts\preprocessing
+
+  # Répartir les données de TRAIN et TEST ==> Contrôler la valeur de la seed (random_state) dans le fichier train_test_splitter.py
+  # Pour faire une commande sur plusieurs lignes :
+  # On met des "^" à la fin de chaque ligne sauf la dernière sur Windows
+  # ou des "\" sur Linux
+  python train_test_splitter.py ^
+    --annotations=../../workspace/training_demo/images/Annotations/ ^
+    --images=../../workspace/training_demo/images/JPEGImages/ ^
+    --testsize=0.2 ^
+    --outputdir=../../workspace/training_demo/images/
+
+  # ATTENTION : Modifier/Créer une nouvelle labelmap.pbtxt avec toutes les espèces souhaitées !
+  # On connaît toutes les espèces présentes avec le script précédent, exemple : ['MESCHA', 'SITTOR', 'MESBLE', 'MESNON', 'PINARB', 'ACCMOU', 'ROUGOR', 'VEREUR', 'MULGRI', 'CAMPAG', 'TOUTUR', 'MOIDOM', 'ECUROU', 'PIEBAV']
+  # Exemple : labelmap_12especes.pbtxt ou labelmap_14especes.pbtxt
+
+  # Génération des fichiers CSV pour le comptage et TFRecords pour l'entrainement
+  python generate_tfrecord.py ^
+    -x C:\tf2\workspace\training_demo\images\train ^
+    -l C:\tf2\workspace\training_demo\annotations\labelmap_14especes.pbtxt ^
+    -o C:\tf2\workspace\training_demo\annotations\train.record ^
+    -c C:\tf2\workspace\training_demo\annotations\train.csv
+
+  python generate_tfrecord.py ^
+    -x C:\tf2\workspace\training_demo\images\test ^
+    -l C:\tf2\workspace\training_demo\annotations\labelmap_14especes.pbtxt ^
+    -o C:\tf2\workspace\training_demo\annotations\test.record ^
+    -c C:\tf2\workspace\training_demo\annotations\test.csv
+
+  # Si on veut voir le nombre d'images par espèce à partir des fichiers CSV générés au dessus :
+  # Remarque : Le comptage est également réalisé dans l'inférence (étape finale après l'entrainement et l'évaluation)
+  python comptage_especes.py
+
+****************************************************************************************************************
+*************************************** À n'éxecuter qu'une seule FOIS ! ***************************************
+****************************************************************************************************************
+# Mise en place du modèle à entraîner 
+Télécharger le modèle suivant : http://download.tensorflow.org/models/object_detection/tf2/20200711/ssd_mobilenet_v2_fpnlite_640x640_coco17_tpu-8.tar.gz
+Puis l'extraire dans le dossier : C:\tf2\workspace\training_demo\pre-trained-models
+
+cd C:\tf2\workspace\training_demo
+mkdir models\my_ssd_mobilenet_v2_fpnlite
+copy C:\tf2\workspace\training_demo\pre-trained-models\ssd_mobilenet_v2_fpnlite_640x640_coco17_tpu-8\pipeline.config models\my_ssd_mobilenet_v2_fpnlite
+****************************************************************************************************************
+****************************************************************************************************************
+
+****************************************************************************************************************
+**************************************  Configuration de l'entrainement  ***************************************
+****************************************************************************************************************
+# TODO automatiser la modification avec un script python ?
+# AVEC DES "/" dans les chemins !!
+#Ligne 3 : num_classes: 14
+#Ligne 135 : batch_size: 6
+#Ligne 165 : fine_tune_checkpoint: "pre-trained-models/ssd_mobilenet_v2_fpnlite_640x640_coco17_tpu-8/checkpoint/ckpt-0"
+#Ligne 171 : fine_tune_checkpoint_type: "detection"
+#Ligne 175 : label_map_path: "annotations/labelmap_14especes.pbtxt"
+#Ligne 177 : input_path: "annotations/train.record"
+#Ligne 185 : label_map_path: "annotations/labelmap_14especes.pbtxt"
+#Ligne 189 : input_path: "annotations/test.record"
+
+# Note : Bien remplacer les champs label_map_path avec le chemin vers la bonne labelmap, exemple : "annotations/labelmap_14especes.pbtxt"
+#        Ainsi que le modèle pré-entraîné dont les poids initialisent l'entraînement
+
+****************************************************************************************************************
+**** Pour chaque script ci-dessous, on doit d'abord lancer les 2 prochaines commandes sur un SHELL Anaconda ****
+                              **** sauf pour la conversion en TF Lite ****
+****************************************************************************************************************
+conda activate tf2
+cd C:\tf2\workspace\training_demo
+****************************************************************************************************************
+
+# Lancement de l'entrainement :
+python model_main_tf2.py ^
+  --model_dir=models\my_ssd_mobilenet_v2_fpnlite ^
+  --pipeline_config_path=models\my_ssd_mobilenet_v2_fpnlite\pipeline.config
+
+# Pour suivre l'évolution des courbes d'apprentissage / LOSS :
+# Sur une nouvelle console Anaconda
+tensorboard --logdir=models\my_ssd_mobilenet_v2_fpnlite
+
+****************************************************************************************************************
+**** Après l'entrainement : Exporter le modèle en TF Lite ****
+****************************************************************************************************************
+# Pour cela, suivre le tutoriel suivant : https://github.com/armaanpriyadarshan/TensorFlow-2-Lite-Object-Detection-on-the-Raspberry-Pi/blob/main/TFLite-Conversion.md
+
+conda activate tf2
+cd C:\tf2\workspace\training_demo
+
+# Conversion en TF Lite
+python export_tflite_graph_tf2.py ^
+  --pipeline_config_path models\my_ssd_mobilenet_v2_fpnlite_V8\pipeline.config ^
+  --trained_checkpoint_dir models\my_ssd_mobilenet_v2_fpnlite_V8 ^
+  --output_directory exported-models\my_tflite_model
+
+# Changement d'environnement virtuel et de SHELL ANACONDA
+conda activate tflite  # TODO : Supprimer car rend l'inférence incompatible, on doit le convertir à partir de Tensorflow 2 !
+python convert-to-tflite.py
+# -> enregistre le fichier .tflite dans le dossier par défaut "exported-models\my_tflite_model"
+
+****************************************************************************************************************
+## Note : pour convertir le premier modèle SSD ; en remettant les bons checkpoints dans C:\tensorflow1\models\research\object_detection\training :
+****************************************************************************************************************
+## TODO les déplacer dans le nouveau répertoire
+python export_tflite_graph_tf2.py ^
+  --pipeline_config_path exported-models\SSD_320x320_trainV2\pipeline.config ^
+  --trained_checkpoint_dir C:\tensorflow1\models\research\object_detection\training ^
+  --output_directory exported-models\my_tflite_model_2
+
+python convert-to-tflite.py --model exported-models/my_tflite_model_2/saved_model --output exported-models/my_tflite_model_2
+
+****************************************************************************************************************
+**** Evaluation du modèle ****
+****************************************************************************************************************
+python model_main_tf2.py ^
+  --pipeline_config_path models\my_ssd_mobilenet_v2_fpnlite\pipeline.config ^
+  --model_dir models\my_ssd_mobilenet_v2_fpnlite ^
+  --checkpoint_dir models\my_ssd_mobilenet_v2_fpnlite ^
+  --alsologtostderr
+
+****************************************************************************************************************
+**** Inférence du modèle à faire après l'exportation ****
+****************************************************************************************************************
+# On doit exporter le modèle en TF2 d'abord : 
+python .\exporter_main_v2.py ^
+  --input_type image_tensor ^
+  --pipeline_config_path .\models\my_ssd_mobilenet_v2_fpnlite_V8\pipeline.config ^
+  --trained_checkpoint_dir .\models\my_ssd_mobilenet_v2_fpnlite_V8 ^
+  --output_directory .\exported-models\TF2_ExportedModel_TrainV8
+
+# Inférence avec notre script personnalisé qui permet de comparer les boxes prédites et les annotations, avec l'affichage des classes prédites/annotées
+# Notre script fournit aussi le comptage du nombre d'images par espèce en TRAIN et en TEST
+python tf2_inference_OD_model.py

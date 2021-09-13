@@ -1,0 +1,74 @@
+========================================================================================================================
+========================================================================================================================
+Calculateur de l'UT3 :
+  Utilisateur  : gimenez (Florent Gimenez, florent.gmz@gmail.com)
+  New MDP : 97.
+
+  Aller sur https://vpn.calmip.univ-toulouse.fr/auth/ et saisir le nom d'utilisateur
+  Une fois connecté, télécharger le fichier .jnlp sur https://vpn.calmip.univ-toulouse.fr/auth/xvpnc.jnlp
+  Déplacer ce fichier dans C:\Users\Flo\Documents\M2_IARF\_Stage\CALMIP
+
+  Sur un shell :
+  # Avec le nom du fichier téléchargé
+  cd C:\Users\Flo\Downloads
+  javaws xvpnc_1631514546.jnlp
+
+  Saisir dans le SHELL MobaXTerm : 
+  ssh -YX -p 11300 gimenez@127.0.0.1
+  cd /tmpdir/DONNEEST21001
+
+  ** PIPELINE pour TF2 Object Detection **
+  mkdir tf2
+  cd tf2
+  git clone https://github.com/tensorflow/models.git
+
+  module purge
+  module load conda/4.9.2
+  conda create -n tf2 pip python=3.8
+  conda activate tf2
+
+  # D'abord demander une augmentation de quota au support, sinon on n'a pas assez d'espace
+  module load python/3.7.4
+  module load cuda/10.1.105
+  pip install tensorflow --user
+
+  conda install -c anaconda protobuf
+  cd models/research
+  protoc object_detection/protos/*.proto --python_out=.
+
+  conda deactivate
+  conda activate tf2
+  pip install cython
+  pip install git+https://github.com/philferriere/cocoapi.git#subdirectory=PythonAPI
+
+  cp object_detection/packages/tf2/setup.py .
+  python -m pip install .
+
+  pip install numpy==1.17.3 --user
+  pip install IPython
+  pip install seaborn
+
+  # Teste si la configuration est correcte :
+  python object_detection/builders/model_builder_tf2_test.py
+
+  cd ../..
+  git clone https://github.com/armaanpriyadarshan/Training-a-Custom-TensorFlow-2.X-Object-Detector
+  mv Training-a-Custom-TensorFlow-2.X-Object-Detector/scripts .
+  mv Training-a-Custom-TensorFlow-2.X-Object-Detector/workspace .
+  rm -rf Training-a-Custom-TensorFlow-2.X-Object-Detector
+  rm -rf workspace/training_demo/images/*
+  rm -rf workspace/training_demo/annotations/*
+  
+  # Clone Gitlab en local ==> Zipper les dossiers raw_data et annotations (zip ou tar)
+  # Puis SCP sur CALMIP (cf. https://www.calmip.univ-toulouse.fr/spip.php?article724) ==> Optimiser WinSCP pour Windows avec le bouton "Avancé" avant de se connecter
+  unzip raw_data.zip
+  unzip annotations.zip
+
+  # Créer les répertoires pour les images et les annotations
+  mkdir /tmpdir/DONNEEST21001/tf2/workspace/training_demo/images/JPEGImages
+  mkdir /tmpdir/DONNEEST21001/tf2/workspace/training_demo/images/Annotations
+  find annotations -name '*.xml' -exec mv --backup=numbered -t /tmpdir/DONNEEST21001/tf2/workspace/training_demo/images/Annotations {} +
+
+  mkdir gitlab
+  cd gitlab
+  cd /tmpdir/DONNEEST21001/tf2/
