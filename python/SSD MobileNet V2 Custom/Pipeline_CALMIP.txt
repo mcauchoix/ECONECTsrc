@@ -18,10 +18,6 @@ ssh -YX -p 11300 gimenez@127.0.0.1
 cd /tmpdir/DONNEEST21001
 
 ** PIPELINE pour TF2 Object Detection **
-mkdir tf2
-cd tf2
-git clone https://github.com/tensorflow/models.git
-
 module purge
 module load conda/4.9.2
 conda create -n tf2 pip python=3.8
@@ -58,6 +54,12 @@ mv Training-a-Custom-TensorFlow-2.X-Object-Detector/workspace .
 rm -rf Training-a-Custom-TensorFlow-2.X-Object-Detector
 rm -rf workspace/training_demo/images/*
 rm -rf workspace/training_demo/annotations/*
+
+git clone https://github.com/mcauchoix/ECONECTsrc
+mv ECONECTsrc/python/SSD\ MobileNet\ V2\ Custom/tf2 /tmpdir/DONNEEST21001
+
+cd /tmpdir/DONNEEST21001/tf2
+git clone https://github.com/tensorflow/models.git
 
 # Clone Gitlab en local ==> Zipper les dossiers raw_data et annotations (zip ou tar)
 # Puis SCP sur CALMIP (cf. https://www.calmip.univ-toulouse.fr/spip.php?article724)
