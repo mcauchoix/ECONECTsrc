@@ -85,14 +85,21 @@
   cd C:\tf2\scripts\preprocessing
 
   # Répartir les données de TRAIN et TEST ==> Contrôler la valeur de la seed (random_state) dans le fichier train_test_splitter.py
-  # Pour faire une commande sur plusieurs lignes :
-  # On met des "^" à la fin de chaque ligne sauf la dernière sur Windows
-  # ou des "\" sur Linux
+  # si on ne met pas de liste de TASKS en TEST
+  # Note : Pour faire une commande sur plusieurs lignes : On met des "^" à la fin de chaque ligne sauf la dernière sur Windows ou des "\" sur Linux
   python train_test_splitter.py ^
     --annotations=../../workspace/training_demo/images/Annotations/ ^
     --images=../../workspace/training_demo/images/JPEGImages/ ^
     --testsize=0.2 ^
     --outputdir=../../workspace/training_demo/images/
+
+  # si on VEUT une liste de TASKS en TEST :
+  # ou si on en exclut plusieurs --> -t balacet lab UPS
+  python train_test_splitter.py ^
+    --annotations=../../workspace/training_demo/images/Annotations/ ^
+    --images=../../workspace/training_demo/images/JPEGImages/ ^
+    --outputdir=../../workspace/training_demo/images/ ^
+    -t balacet
 
   # ATTENTION : Modifier/Créer une nouvelle labelmap.pbtxt avec toutes les espèces souhaitées !
   # On connaît toutes les espèces présentes avec le script précédent, exemple : ['MESCHA', 'SITTOR', 'MESBLE', 'MESNON', 'PINARB', 'ACCMOU', 'ROUGOR', 'VEREUR', 'MULGRI', 'CAMPAG', 'TOUTUR', 'MOIDOM', 'ECUROU', 'PIEBAV']
@@ -119,7 +126,9 @@
 *************************************** À n'éxecuter qu'une seule FOIS ! ***************************************
 ****************************************************************************************************************
 # Mise en place du modèle à entraîner 
-Télécharger le modèle suivant : http://download.tensorflow.org/models/object_detection/tf2/20200711/ssd_mobilenet_v2_fpnlite_640x640_coco17_tpu-8.tar.gz
+Télécharger les modèles suivants : 
+http://download.tensorflow.org/models/object_detection/tf2/20200711/ssd_mobilenet_v2_320x320_coco17_tpu-8.tar.gz
+http://download.tensorflow.org/models/object_detection/tf2/20200711/ssd_mobilenet_v2_fpnlite_640x640_coco17_tpu-8.tar.gz
 Puis l'extraire dans le dossier : C:\tf2\workspace\training_demo\pre-trained-models
 
 cd C:\tf2\workspace\training_demo
@@ -214,3 +223,15 @@ python .\exporter_main_v2.py ^
 # Inférence avec notre script personnalisé qui permet de comparer les boxes prédites et les annotations, avec l'affichage des classes prédites/annotées
 # Notre script fournit aussi le comptage du nombre d'images par espèce en TRAIN et en TEST
 python tf2_inference_OD_model.py
+
+# Sur les vidéos :
+python TF-video-od.py --model exported-models\SSD_320x320_trainV2 --labels annotations\labelmap_12especes.pbtxt --video videos\MAH00086.MP4
+
+# Comparaison des 2 modèles sur une même vidéo et avec un seuil de 60%
+python TF-video-od.py --model exported-models\SSD_320x320_trainV2 --labels annotations\labelmap_12especes.pbtxt --video videos\2021-09-16-09-18-27.mp4
+python TF-video-od.py --model exported-models\TF2_ExportedModel_TrainV8 --labels annotations\labelmap_12especes.pbtxt --video videos\2021-09-16-09-18-27.mp4
+
+# Sur des images diverses : 
+python TF-image-od.py --model exported-models\SSD_320x320_trainV2 --labels annotations\labelmap_12especes.pbtxt --image videos\test1.png
+python TF-image-od.py --model exported-models\TF2_ExportedModel_TrainV8 --labels annotations\labelmap_12especes.pbtxt --image images\test\2021-01-05-16-01-11.jpg
+python TF-image-od.py --model exported-models\SSD_320x320_trainV2 --labels annotations\labelmap_12especes.pbtxt --image raw_data\task_05-01-2021\2021-01-05-15-58-14.jpg

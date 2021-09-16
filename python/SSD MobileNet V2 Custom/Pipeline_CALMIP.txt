@@ -4,62 +4,70 @@ Calculateur de l'UT3 :
 Utilisateur  : gimenez (Florent Gimenez, florent.gmz@gmail.com)
 New MDP : 97.
 
+Espace perso : /olympe1/t21001/gimenez
+Espace partagé : /tmpdir/DONNEEST21001
+
 Aller sur https://vpn.calmip.univ-toulouse.fr/auth/ et saisir le nom d'utilisateur
 Une fois connecté, télécharger le fichier .jnlp sur https://vpn.calmip.univ-toulouse.fr/auth/xvpnc.jnlp
-Déplacer ce fichier dans C:\Users\Flo\Documents\M2_IARF\_Stage\CALMIP
 
-Sur un shell :
-# Avec le nom du fichier téléchargé
+# Double cliquer sur le fichier .jlnp ou bien sur un shell avec le nom du fichier téléchargé
 cd C:\Users\Flo\Downloads
-javaws xvpnc_1631514546.jnlp
+javaws xvpnc_1631653059.jnlp
 
-Saisir dans le SHELL MobaXTerm : 
+# Connexion sur la frontale dans le SHELL MobaXTerm : 
 ssh -YX -p 11300 gimenez@127.0.0.1
-cd /tmpdir/DONNEEST21001
 
 ** PIPELINE pour TF2 Object Detection **
-module purge
-module load conda/4.9.2
-conda create -n tf2 pip python=3.8
-conda activate tf2
-
 # D'abord demander une augmentation de quota au support, sinon on n'a pas assez d'espace
-module load python/3.7.4
-module load cuda/10.1.105
-pip install tensorflow --user
+# Versions disponibles des paquets
+module avail python
+module avail cuda
+module avail tensorflow
+
+# Environnements pré-configurés disponibles :
+conda env list
+
+module purge
+module load conda/4.9.2 cuda/11.0
+conda create -p /tmpdir/DONNEEST21001/tensorflow --clone tensorflow-2.4.1
+conda activate /tmpdir/DONNEEST21001/tensorflow
+
+****************************************************************************************************************
+*************************************** À n'éxecuter qu'une seule FOIS ! ***************************************
+****************************************************************************************************************
+# Clone de notre GitHub
+git clone https://github.com/mcauchoix/ECONECTsrc
+mv ECONECTsrc/python/SSD\ MobileNet\ V2\ Custom/tf2 /tmpdir/DONNEEST21001
+
+cd /tmpdir/DONNEEST21001/tf2
+git clone https://github.com/tensorflow/models.git
+****************************************************************************************************************
+****************************************************************************************************************
 
 conda install -c anaconda protobuf
 cd models/research
 protoc object_detection/protos/*.proto --python_out=.
 
 conda deactivate
-conda activate tf2
+conda activate /tmpdir/DONNEEST21001/tensorflow
 pip install cython
 pip install git+https://github.com/philferriere/cocoapi.git#subdirectory=PythonAPI
 
 cp object_detection/packages/tf2/setup.py .
-python -m pip install .
+python -m pip install --use-feature=2020-resolver .
 
-pip install numpy==1.17.3 --user
 pip install IPython
 pip install seaborn
+pip install tensorflow==2.5.0
+pip install numpy==1.17.3 --user
+#pip uninstall keras
+#pip install keras --upgrade
+pip install -U scikit-learn
+pip install pandas
 
 # Teste si la configuration est correcte :
-python object_detection/builders/model_builder_tf2_test.py
-
-cd ../..
-git clone https://github.com/armaanpriyadarshan/Training-a-Custom-TensorFlow-2.X-Object-Detector
-mv Training-a-Custom-TensorFlow-2.X-Object-Detector/scripts .
-mv Training-a-Custom-TensorFlow-2.X-Object-Detector/workspace .
-rm -rf Training-a-Custom-TensorFlow-2.X-Object-Detector
-rm -rf workspace/training_demo/images/*
-rm -rf workspace/training_demo/annotations/*
-
-git clone https://github.com/mcauchoix/ECONECTsrc
-mv ECONECTsrc/python/SSD\ MobileNet\ V2\ Custom/tf2 /tmpdir/DONNEEST21001
-
-cd /tmpdir/DONNEEST21001/tf2
-git clone https://github.com/tensorflow/models.git
+cd /tmpdir/DONNEEST21001/example
+sbatch script.slurm
 
 # Clone Gitlab en local ==> Zipper les dossiers raw_data et annotations (zip ou tar)
 # Puis SCP sur CALMIP (cf. https://www.calmip.univ-toulouse.fr/spip.php?article724)
@@ -72,10 +80,96 @@ unzip annotations.zip
 mkdir -p /tmpdir/DONNEEST21001/tf2/workspace/training_demo/images/JPEGImages
 mkdir -p /tmpdir/DONNEEST21001/tf2/workspace/training_demo/images/Annotations
 # à partir du dossier parent de "raw_data" et "annotations"
-find raw_data -name '*.jpg' -exec mv --backup=numbered -t /tmpdir/DONNEEST21001/tf2/workspace/training_demo/images/JPEGImages {} +
+
+find raw_data -iname '*.jpg' -exec mv --backup=numbered -t /tmpdir/DONNEEST21001/tf2/workspace/training_demo/images/JPEGImages {} +
 find annotations -name '*.xml' -exec mv --backup=numbered -t /tmpdir/DONNEEST21001/tf2/workspace/training_demo/images/Annotations {} +
 
 # Supprimer les images/annotations illisibles de 0 ko
 cd /tmpdir/DONNEEST21001/tf2/workspace/training_demo/images
 find . -type f -empty -print -delete
 
+# Vérifier qu'il y ait le bon nombre d'images
+ls . | wc -l
+
+###########################################################################
+# Execution des scripts pour les données et réseaux de neurones
+
+module purge
+module load conda/4.9.2 cuda/11.0
+conda activate tf2
+cd /tmpdir/DONNEEST21001/tf2/scripts/preprocessing
+
+# Répartir les données de TRAIN et TEST ==> Contrôler la valeur de la seed (random_state) dans le fichier train_test_splitter.py
+# si on ne met pas de liste de TASKS en TEST
+# Note : Pour faire une commande sur plusieurs lignes : On met des "\" à chaque fin de ligne sur Linux
+python train_test_splitter.py \
+--annotations=../../workspace/training_demo/images/Annotations/ \
+--images=../../workspace/training_demo/images/JPEGImages/ \
+--testsize=0.2
+--outputdir=../../workspace/training_demo/images/ \
+
+# si on VEUT une liste de TASKS en TEST :
+# ou si on en exclut plusieurs --> -t balacet lab UPS
+python train_test_splitter.py \
+--annotations=../../workspace/training_demo/images/Annotations/ \
+--images=../../workspace/training_demo/images/JPEGImages/ \
+--outputdir=../../workspace/training_demo/images/ \
+-t balacet
+
+# A partir de maintenant, on a besoin de Tensorflow GPU donc on doit utiliser un script SLURM pour réserver des ressources
+# Lancement des calculs sur CALMIP :
+cd /tmpdir/DONNEEST21001/tf2
+sbatch generate_tfrecord.slurm
+
+# Si on veut voir le nombre d'images par espèce, et le nombre d'espèces par task :
+# Remarque : Le comptage est également réalisé dans l'inférence (étape finale après l'entrainement et l'évaluation)
+python comptage_especes.py
+
+****************************************************************************************************************
+*************************************** À n'éxecuter qu'une seule FOIS ! ***************************************
+****************************************************************************************************************
+# Récupération des modèles pré-entrainés :
+cd /tmpdir/DONNEEST21001/tf2/workspace/training_demo/pre-trained-models
+wget -c http://download.tensorflow.org/models/object_detection/tf2/20200711/ssd_mobilenet_v2_320x320_coco17_tpu-8.tar.gz -O - | tar -xz
+wget -c http://download.tensorflow.org/models/object_detection/tf2/20200711/ssd_mobilenet_v2_fpnlite_640x640_coco17_tpu-8.tar.gz -O - | tar -xz
+****************************************************************************************************************
+****************************************************************************************************************
+
+****************************************************************************************************************
+**************************************  Configuration de l'entrainement  ***************************************
+****************************************************************************************************************
+# Créer un dossier pour le modèle à entraîner :
+mkdir SSD_Mbnet_v2_CVAT_07_09
+# Puis créer un fichier pipeline.config dans ce dossier, à partir du modèle pré-entrainé choisi, comme suit :
+
+# TODO automatiser la modification avec un script python ?
+# AVEC DES "/" dans les chemins !!
+#Ligne 3 : num_classes: 14
+#Ligne 135 : batch_size: 512
+#Ligne 165 : fine_tune_checkpoint: "/tmpdir/DONNEEST21001/tf2/workspace/training_demo/pre-trained-models/ssd_mobilenet_v2_320x320_coco17_tpu-8/checkpoint/ckpt-0"
+#Ligne 171 : fine_tune_checkpoint_type: "detection"
+#Ligne 175 : label_map_path: "/tmpdir/DONNEEST21001/tf2/workspace/training_demo/annotations/labelmap_14especes.pbtxt"
+#Ligne 177 : input_path: "/tmpdir/DONNEEST21001/tf2/workspace/training_demo/annotations/train.record"
+#Ligne 185 : label_map_path: "/tmpdir/DONNEEST21001/tf2/workspace/training_demo/annotations/labelmap_14especes.pbtxt"
+#Ligne 189 : input_path: "/tmpdir/DONNEEST21001/tf2/workspace/training_demo/annotations/test.record"
+
+# Note : Bien remplacer les champs label_map_path avec le chemin vers la bonne labelmap, exemple : "annotations/labelmap_14especes.pbtxt"
+#        Ainsi que le modèle pré-entraîné dont les poids initialisent l'entraînement : fine_tune_checkpoint avec le bon chemin vers le modèle à entraîner
+
+****************************************************************************************************************
+** Avant chaque script ci-dessous, on active l'environnement et on se place dans le bon répertoire de travail **
+****************************************************************************************************************
+conda activate /tmpdir/DONNEEST21001/tensorflow
+cd /tmpdir/DONNEEST21001/tf2
+****************************************************************************************************************
+# Lancement de l'entrainement :
+sbatch training.slurm
+
+# Pour voir si la tâche est toujours en cours d'exécution :
+squeue -u $USER
+
+# Infos sur le calcul en cours :
+scontrol show jobid $SLURM_JOBID
+
+# Pour l'interrompre :
+scancel $SLURM_JOBID
