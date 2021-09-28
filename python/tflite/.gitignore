@@ -1,0 +1,9 @@
+# Dossiers non synchronisés avec GitHub (car trop lourds ou à générer)
+bin/
+etc/
+include/
+lib/
+share/
+saved_frames/
+test/
+videos/
