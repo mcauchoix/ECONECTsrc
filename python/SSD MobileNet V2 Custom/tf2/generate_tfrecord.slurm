@@ -1,4 +1,4 @@
-#!/bin/bash
+#! /bin/bash
 
 #SBATCH -N 1
 #SBATCH -n 9
@@ -9,10 +9,9 @@
 
 # Charge les modules prédéfinis
 module purge
-module load conda/4.9.2 cuda/11.0
-
-# Active notre environnement virtuel CONDA
-source /usr/local/miniconda/4.9.2/bin/activate tf2
+module load conda/4.9.2 
+module load cuda/11.2
+conda activate tf2
 
 # Lien vers le fichier python à executer
 EXE=/tmpdir/DONNEEST21001/tf2/scripts/preprocessing/generate_tfrecord.py
