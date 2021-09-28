@@ -3,17 +3,6 @@
   (from https://github.com/sglvladi/TensorFlowObjectDetectionTutorial)
 
   ****************************************************************************************************************
-  ****************** Récupération de l'environment de travail, à n'éxecuter qu'une seule FOIS ! ******************
-  ****************************************************************************************************************
-  # Dossier où le clone s'effectue
-  cd Documents/ECONECT
-  # récupére le code de Florent
-  git clone https://github.com/mcauchoix/ECONECTsrc
-  # récupère les modèles pré entrainés de Tensorflow
-  cd /ECONECTsrc/python/SSD MobileNet V2 Custom/tf2
-  git clone https://github.com/tensorflow/models.git
-
-  ****************************************************************************************************************
   ********** Installation de l'environment virtuel et des dépendances, à n'éxecuter qu'une seule FOIS ! **********
   ****************************************************************************************************************
   conda create -n tf2 pip python=3.8
@@ -22,17 +11,21 @@
   # ou le cas échéant :
   pip install tensorflow==2.5.0
 
+  mkdir C:\tf2
+  cd C:\tf2
+  git clone https://github.com/tensorflow/models.git
+
   conda install -c anaconda protobuf
-  cd models/research
-  protoc object_detection/protos/*.proto --python_out=.
+  cd models\research
+  protoc object_detection\protos\*.proto --python_out=.
   => * Fermer ce terminal et en ouvrir un nouveau ! *
 
   conda activate tf2
   pip install cython
   pip install git+https://github.com/philferriere/cocoapi.git#subdirectory=PythonAPI
   
-  cd /Users/maximecauchoix/Documents/ECONECT/ECONECTsrc/python/SSD\ MobileNet\ V2\ Custom/tf2/models/research/
-  cp object_detection/packages/tf2/setup.py .
+  cd C:\tf2\models\research
+  copy object_detection\packages\tf2\setup.py .
   python -m pip install .
   
   # Afin d'éviter une erreur de compilation quand on veut évaluer le modèle avec COCO et PASCAL VOC 2010 
@@ -41,7 +34,18 @@
   pip install seaborn
 
   # Teste si l'installation s'est bien déroulée :
-  python object_detection/builders/model_builder_tf2_test.py
+  python object_detection\builders\model_builder_tf2_test.py
+ 
+  # Création des dossiers contenant les fichiers d'entrainement et les images
+  cd C:\tf2
+  git clone https://github.com/armaanpriyadarshan/Training-a-Custom-TensorFlow-2.X-Object-Detector
+  move Training-a-Custom-TensorFlow-2.X-Object-Detector\scripts .
+  move Training-a-Custom-TensorFlow-2.X-Object-Detector\workspace .
+  rd /s /q Training-a-Custom-TensorFlow-2.X-Object-Detector
+  del /q workspace\training_demo\images\*
+  del /q workspace\training_demo\annotations\*
+  rmdir /s /q workspace\training_demo\images\
+  mkdir workspace\training_demo\images
 
   ****************************************************************************************************************
   ****************************************************************************************************************
