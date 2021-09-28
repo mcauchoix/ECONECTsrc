@@ -10,7 +10,7 @@
   # récupére le code de Florent
   git clone https://github.com/mcauchoix/ECONECTsrc
   # récupère les modèles pré entrainés de Tensorflow
-  cd /ECONECTsrc/python/SSD MobileNet V2 Custom/tf2
+  cd /ECONECTsrc/python/SSD\ MobileNet\ V2\ Custom/tf2
   git clone https://github.com/tensorflow/models.git
 
   ****************************************************************************************************************
@@ -50,29 +50,23 @@
   ************************ Phase de préparation du dataset pour l'entraînement du réseau *************************
   ****************************************************************************************************************
   
-  # Clone Gitlab puis déplacer le dossier "raw_data" dans "workspace\training_demo\images"
-  Windows ==> Xcopy /E /I C:\Users\Flo\Documents\M2_IARF\_Stage\Gitlab\p0133_bird_data\raw_data C:\tf2\workspace\training_demo\images
-  Linux ==> cp dossierSource dossierDestination
+  # Clone Gitlab en local ==> dossiers raw_data et annotations
+  cd /Users/maximecauchoix/Documents/ECONECT/ECONECTsrc/python/SSD\ MobileNet\ V2\ Custom/tf2
 
-  # Supprime l'image illisible à la racine
-  cd C:\tf2\workspace\training_demo\images
-  del /f 2021-01-19-13-43-29.jpg
+  # Créer les répertoires pour les images et les annotations
+  mkdir -p /Users/maximecauchoix/Documents/ECONECT/ECONECTsrc/python/SSD\ MobileNet\ V2\ Custom/tf2/workspace/training_demo/images/JPEGImages
+  mkdir -p /Users/maximecauchoix/Documents/ECONECT/ECONECTsrc/python/SSD\ MobileNet\ V2\ Custom/tf2/workspace/training_demo/images/Annotations
+  # à partir du dossier parent de "raw_data" et "annotations"
 
-  # Vérifier qu'il n'y ait pas d'autres images illisibles sinon on les supprime
-  for /r %F in (*) do @if %~zF==0 del "%F"
+  find raw_data -iname '*.jpg' -exec mv --backup=numbered -t /Users/maximecauchoix/Documents/ECONECT/ECONECTsrc/python/SSD\ MobileNet\ V2\ Custom/tf2/workspace/training_demo/images/JPEGImages {} +
+  find annotations -name '*.xml' -exec mv --backup=numbered -t /Users/maximecauchoix/Documents/ECONECT/ECONECTsrc/python/SSD\ MobileNet\ V2\ Custom/tf2/workspace/training_demo/images/Annotations {} +
 
-  # DEPLACE toutes les images dans le dossier "JPEGImages"
-  mkdir JPEGImages
-  FOR /R "C:\tf2\workspace\training_demo\images" %i IN (*.jpg) DO MOVE "%i" "C:\tf2\workspace\training_demo\images\JPEGImages"
-  # Supprime les dossiers vides
-  for /d /r %d in (*.*) do rd "%d"
+  # Supprimer les images/annotations illisibles de 0 ko
+  cd /Users/maximecauchoix/Documents/ECONECT/ECONECTsrc/python/SSD\ MobileNet\ V2\ Custom/tf2/workspace/training_demo/images
+  find . -type f -empty -print -delete
 
-  # Démarche pour cloner les annotations en format PASCAL VOC 1.1 puis
-  # COPIE les fichiers XML du dossier cloné "annotations" dans un dossier "Annotations" (et supprimer les dossiers vides)
-  mkdir Annotations
-  FOR /R "C:\Users\Flo\Documents\M2_IARF\_Stage\Gitlab\python-cvatclient\annotations" %i IN (*.xml) DO COPY "%i" "C:\tf2\workspace\training_demo\images\Annotations"
-
-  # Copier les fichiers "train_test_splitter.py" et "xml_to_csv.py" sont bien dans "scripts\preprocessing"
+  # Vérifier qu'il y ait le bon nombre d'images
+  ls . | wc -l
 
   ****************************************************************************************************************
   ************************** Phase de d'échantillonnage des données pour l'entraînement **************************
@@ -80,7 +74,7 @@
 
   **** Sur un Shell Anaconda ****
   conda activate tf2
-  cd C:\tf2\scripts\preprocessing
+  cd /Users/maximecauchoix/Documents/ECONECT/ECONECTsrc/python/SSD\ MobileNet\ V2\ Custom/tf2/scripts/preprocessing
 
   # Répartir les données de TRAIN et TEST ==> Contrôler la valeur de la seed (random_state) dans le fichier train_test_splitter.py
   # si on ne met pas de liste de TASKS en TEST
@@ -105,16 +99,16 @@
 
   # Génération des fichiers CSV pour le comptage et TFRecords pour l'entrainement
   python generate_tfrecord.py ^
-    -x C:\tf2\workspace\training_demo\images\train ^
-    -l C:\tf2\workspace\training_demo\annotations\labelmap_14especes.pbtxt ^
-    -o C:\tf2\workspace\training_demo\annotations\train.record ^
-    -c C:\tf2\workspace\training_demo\annotations\train.csv
+    -x /Users/maximecauchoix/Documents/ECONECT/ECONECTsrc/python/SSD\ MobileNet\ V2\ Custom/tf2/workspace/training_demo/images/train ^
+    -l /Users/maximecauchoix/Documents/ECONECT/ECONECTsrc/python/SSD\ MobileNet\ V2\ Custom/tf2/workspace/training_demo/annotations/labelmap_14especes.pbtxt ^
+    -o /Users/maximecauchoix/Documents/ECONECT/ECONECTsrc/python/SSD\ MobileNet\ V2\ Custom/tf2/workspace/training_demo/annotations/train.record ^
+    -c /Users/maximecauchoix/Documents/ECONECT/ECONECTsrc/python/SSD\ MobileNet\ V2\ Custom/tf2/workspace/training_demo/annotations/train.csv
 
   python generate_tfrecord.py ^
-    -x C:\tf2\workspace\training_demo\images\test ^
-    -l C:\tf2\workspace\training_demo\annotations\labelmap_14especes.pbtxt ^
-    -o C:\tf2\workspace\training_demo\annotations\test.record ^
-    -c C:\tf2\workspace\training_demo\annotations\test.csv
+    -x /Users/maximecauchoix/Documents/ECONECT/ECONECTsrc/python/SSD\ MobileNet\ V2\ Custom/tf2/workspace/training_demo/images/test ^
+    -l /Users/maximecauchoix/Documents/ECONECT/ECONECTsrc/python/SSD\ MobileNet\ V2\ Custom/tf2/workspace/training_demo/annotations/labelmap_14especes.pbtxt ^
+    -o /Users/maximecauchoix/Documents/ECONECT/ECONECTsrc/python/SSD\ MobileNet\ V2\ Custom/tf2/workspace/training_demo/annotations/test.record ^
+    -c /Users/maximecauchoix/Documents/ECONECT/ECONECTsrc/python/SSD\ MobileNet\ V2\ Custom/tf2/workspace/training_demo/annotations/test.csv
 
   # Si on veut voir le nombre d'images par espèce à partir des fichiers CSV générés au dessus :
   # Remarque : Le comptage est également réalisé dans l'inférence (étape finale après l'entrainement et l'évaluation)
@@ -127,11 +121,11 @@
 Télécharger les modèles suivants : 
 http://download.tensorflow.org/models/object_detection/tf2/20200711/ssd_mobilenet_v2_320x320_coco17_tpu-8.tar.gz
 http://download.tensorflow.org/models/object_detection/tf2/20200711/ssd_mobilenet_v2_fpnlite_640x640_coco17_tpu-8.tar.gz
-Puis l'extraire dans le dossier : C:\tf2\workspace\training_demo\pre-trained-models
+Puis l'extraire dans le dossier : /Users/maximecauchoix/Documents/ECONECT/ECONECTsrc/python/SSD\ MobileNet\ V2\ Custom/tf2/workspace/training_demo/pre-trained-models
 
-cd C:\tf2\workspace\training_demo
+cd /Users/maximecauchoix/Documents/ECONECT/ECONECTsrc/python/SSD\ MobileNet\ V2\ Custom/tf2/workspace/training_demo
 mkdir models\my_ssd_mobilenet_v2_fpnlite
-copy C:\tf2\workspace\training_demo\pre-trained-models\ssd_mobilenet_v2_fpnlite_640x640_coco17_tpu-8\pipeline.config models\my_ssd_mobilenet_v2_fpnlite
+copy /Users/maximecauchoix/Documents/ECONECT/ECONECTsrc/python/SSD\ MobileNet\ V2\ Custom/tf2/workspace/training_demo/pre-trained-models/ssd_mobilenet_v2_fpnlite_640x640_coco17_tpu-8/pipeline.config models/my_ssd_mobilenet_v2_fpnlite
 ****************************************************************************************************************
 ****************************************************************************************************************
 
@@ -157,7 +151,7 @@ copy C:\tf2\workspace\training_demo\pre-trained-models\ssd_mobilenet_v2_fpnlite_
                               **** sauf pour la conversion en TF Lite ****
 ****************************************************************************************************************
 conda activate tf2
-cd C:\tf2\workspace\training_demo
+cd /Users/maximecauchoix/Documents/ECONECT/ECONECTsrc/python/SSD\ MobileNet\ V2\ Custom/tf2/workspace/training_demo/
 ****************************************************************************************************************
 
 # Lancement de l'entrainement :
@@ -175,7 +169,7 @@ tensorboard --logdir=models\my_ssd_mobilenet_v2_fpnlite
 # Pour cela, suivre le tutoriel suivant : https://github.com/armaanpriyadarshan/TensorFlow-2-Lite-Object-Detection-on-the-Raspberry-Pi/blob/main/TFLite-Conversion.md
 
 conda activate tf2
-cd C:\tf2\workspace\training_demo
+cd /Users/maximecauchoix/Documents/ECONECT/ECONECTsrc/python/SSD\ MobileNet\ V2\ Custom/tf2/workspace/training_demo/
 
 # Conversion en TF Lite
 python export_tflite_graph_tf2.py ^

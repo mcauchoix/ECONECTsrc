@@ -23,14 +23,14 @@ git clone https://github.com/mcauchoix/ECONECTsrc/tree/main/python/tflite
 # ******** Création de l'environnement virtuel : tflite ******** #
 sudo pip3 install virtualenv
 python3 -m venv tflite
-# ******** Fin section ******** #
 
 # A chaque fois qu'on ouvre un terminal
 cd Documents/tflite
 source bin/activate
 bash install-prerequisites.sh
 
-python -c "import tflite_runtime as tf;print(tf.__version__)"  --> Devrait afficher 2.5.0
+# Devrait afficher "2.5.0"
+python -c "import tflite_runtime as tf;print(tf.__version__)"
 
 *************************************************************
    ******** Utilisation des modèles en embarqué ********
