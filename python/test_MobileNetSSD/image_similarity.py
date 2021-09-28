@@ -22,6 +22,12 @@ Exemples pour lancer le script :
 """
 # https://idealo.github.io/imagededup/methods/cnn/
 # https://idealo.github.io/imagededup/user_guide/finding_duplicates/
+
+"""
+Ce script permet d'éliminer les images trop similaires à partir d'un dossier se situant
+au même endroit
+"""
+
 from imagededup.methods import CNN
 from PIL import Image
 import tensorflow as tf
@@ -48,7 +54,7 @@ def createFolders_FindSimilarities(image_dir, seuil, location):
         current_folder = image_dir + img
         name, ext = os.path.splitext(img)
         # Si c'est une image, on créé le dossier correspondant à son jour et on la déplace dedans
-        if ext == '.jpg':
+        if ext == '.jpg' or ext == '.png':
             current_date = img.split('-')[0]
             # Créé le dossier associé à la date courante (s'il n'existe pas déjà)
             newImage_folder = image_dir + 'task_' + current_date + '_' + location
