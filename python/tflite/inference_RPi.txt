@@ -16,17 +16,17 @@ sudo raspi-config  --> activer la caméra et SSH
 
 # ******** Récupération de l'environnement de travail ******** #
 cd Documents
-git clone 
-Puis mettre les fichiers .tflite et labelmap.txt dans /home/Documents/tensorflow/models
+git clone https://github.com/mcauchoix/ECONECTsrc/tree/main/python/tflite
+# On peut mettre de nouveaux fichiers .tflite et labelmap.txt dans /home/Documents/tflite/models
 
 
-# ******** Création de l'environnement virtuel : tensorflow ******** #
+# ******** Création de l'environnement virtuel : tflite ******** #
 sudo pip3 install virtualenv
-python3 -m venv tensorflow
+python3 -m venv tflite
 # ******** Fin section ******** #
 
 # A chaque fois qu'on ouvre un terminal
-cd Documents/tensorflow
+cd Documents/tflite
 source bin/activate
 bash install-prerequisites.sh
 
@@ -36,23 +36,23 @@ python -c "import tflite_runtime as tf;print(tf.__version__)"  --> Devrait affic
    ******** Utilisation des modèles en embarqué ********
 *************************************************************
 # Pour l'inférence sur les images de test : (inspiré de https://github.com/EdjeElectronics/TensorFlow-Lite-Object-Detection-on-Android-and-Raspberry-Pi)
-cd Documents/tensorflow
+cd Documents/tflite
 python3 TFLite_detection_image.py --modeldir=models/modelV2.tflite --imagedir=test
 
 # Inférence sur une vidéo avec le SSD 320x320 (TrainV2), avec les détections affichés en temps réel :
-cd Documents/tensorflow
+cd Documents/tflite
 python3 TFLite-Video-od.py --model=models/modelV2.tflite --labels=models/labelmap.txt --video=videos/2021-09-16-09-18-27.mp4
 
 # Inférence sur une vidéo avec le SSD 640x640 FPN Lite (TrainV8) avec les détections affichés en temps réel :
-cd Documents/tensorflow
+cd Documents/tflite
 python3 TFLite-Video-od.py --model=models/modelV8.tflite --labels=models/labelmap.txt --video=videos/2021-09-16-09-18-27.mp4
 
 # Inférence sur une vidéo avec le SD 320x320 (TrainV2) avec les détections sauvegardées :
-cd Documents/tensorflow
+cd Documents/tflite
 python3 TFLite-VideoFrames-od.py  --model=models/modelV2.tflite --labels=models/labelmap.txt --video=videos/2021-09-16-09-18-27.mp4
 
 # Pour évaluer le modèle lite :
-cd Documents/tensorflow
+cd Documents/tflite
 python3 TFLite_evaluation.py --modeldir=models --imagedir=test
 
 *************************************************************
