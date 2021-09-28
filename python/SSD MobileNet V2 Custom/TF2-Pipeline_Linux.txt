@@ -8,9 +8,14 @@
   conda create -n tf2 pip python=3.8
   conda activate tf2
   pip install tensorflow-gpu  # ==2.5.0 pour le GPU de Florent
+  # ou le cas échéant :
+  pip install tensorflow==2.5.0
 
-  mkdir C:\tf2
-  cd C:\tf2
+  # Dossier où le clone s'effectue
+  cd /home/Documents/
+  git clone https://github.com/mcauchoix/ECONECTsrc
+
+  cd python/SSD MobileNet V2 Custom/tf2
   git clone https://github.com/tensorflow/models.git
 
   conda install -c anaconda protobuf
@@ -34,17 +39,6 @@
   # Teste si l'installation s'est bien déroulée :
   python object_detection\builders\model_builder_tf2_test.py
  
-  # Création des dossiers contenant les fichiers d'entrainement et les images
-  cd C:\tf2
-  git clone https://github.com/armaanpriyadarshan/Training-a-Custom-TensorFlow-2.X-Object-Detector
-  move Training-a-Custom-TensorFlow-2.X-Object-Detector\scripts .
-  move Training-a-Custom-TensorFlow-2.X-Object-Detector\workspace .
-  rd /s /q Training-a-Custom-TensorFlow-2.X-Object-Detector
-  del /q workspace\training_demo\images\*
-  del /q workspace\training_demo\annotations\*
-  rmdir /s /q workspace\training_demo\images\
-  mkdir workspace\training_demo\images
-
   ****************************************************************************************************************
   ****************************************************************************************************************
 
