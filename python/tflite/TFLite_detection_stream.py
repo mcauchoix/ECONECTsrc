@@ -29,7 +29,7 @@ class VideoStream:
     """Camera object that controls video streaming"""
     def __init__(self,resolution=(640,480),framerate=30):
         # Initialize the PiCamera and the camera image stream
-        self.stream = cv2.VideoCapture(STREAM_URL)
+        self.stream = cv2.VideoCapture(0)
         ret = self.stream.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
         ret = self.stream.set(3,resolution[0])
         ret = self.stream.set(4,resolution[1])
@@ -69,8 +69,6 @@ class VideoStream:
 parser = argparse.ArgumentParser()
 parser.add_argument('--modeldir', help='Folder the .tflite file is located in',
                     required=True)
-parser.add_argument('--streamurl', help='The full URL of the video stream e.g. http://ipaddress:port/stream/video.mjpeg',
-                    required=True)
 parser.add_argument('--graph', help='Name of the .tflite file, if different than detect.tflite',
                     default='detect.tflite')
 parser.add_argument('--labels', help='Name of the labelmap file, if different than labelmap.txt',
@@ -78,14 +76,13 @@ parser.add_argument('--labels', help='Name of the labelmap file, if different th
 parser.add_argument('--threshold', help='Minimum confidence threshold for displaying detected objects',
                     default=0.5)
 parser.add_argument('--resolution', help='Desired webcam resolution in WxH. If the webcam does not support the resolution entered, errors may occur.',
-                    default='1280x720')
+                    default='1280x720')  # ou 1920x1088
 parser.add_argument('--edgetpu', help='Use Coral Edge TPU Accelerator to speed up detection',
                     action='store_true')
 
 args = parser.parse_args()
 
 MODEL_NAME = args.modeldir
-STREAM_URL = args.streamurl
 GRAPH_NAME = args.graph
 LABELMAP_NAME = args.labels
 min_conf_threshold = float(args.threshold)
@@ -116,10 +113,10 @@ if use_TPU:
 CWD_PATH = os.getcwd()
 
 # Path to .tflite file, which contains the model that is used for object detection
-PATH_TO_CKPT = os.path.join(CWD_PATH,MODEL_NAME,GRAPH_NAME)
+PATH_TO_CKPT = os.path.join(CWD_PATH,MODEL_NAME)
 
 # Path to label map file
-PATH_TO_LABELS = os.path.join(CWD_PATH,MODEL_NAME,LABELMAP_NAME)
+PATH_TO_LABELS = os.path.join(CWD_PATH, LABELMAP_NAME)
 
 # Load the label map
 with open(PATH_TO_LABELS, 'r') as f:
@@ -223,7 +220,7 @@ while True:
     frame_rate_calc= 1/time1
 
     # Press 'q' to quit
-    if cv2.waitKey(1) == ord('q'):
+    if cv2.waitKey(0) == ord('q'):
         break
 
 # Clean up

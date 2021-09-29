@@ -129,7 +129,7 @@ while(video.isOpened()):
     frame_rate_calc= 1/time1
 
     # Press 'q' to quit
-    if cv2.waitKey(1) == ord('q'):
+    if cv2.waitKey(0) == ord('q'):
         break
 
 # Clean up

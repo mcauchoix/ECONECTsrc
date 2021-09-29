@@ -8,6 +8,7 @@ import cv2
 import numpy as np
 import sys
 import time
+import datetime
 from threading import Thread
 import importlib.util
 
@@ -61,8 +62,10 @@ parser.add_argument('--labels', help='Provide the path to the Labels, default is
 parser.add_argument('--threshold', help='Minimum confidence threshold for displaying detected objects',
                     default=0.65)
 parser.add_argument('--resolution', help='Desired webcam resolution in WxH. If the webcam does not support the resolution entered, errors may occur.',
-                    default='1920x1088')
-                    
+                    default='1280x720')  # ou 1920x1088
+parser.add_argument('--keepDetections', help='Saves detections (boxes, classes and scores) on frames',
+                    default=False)
+                   
 args = parser.parse_args()
 
 # PROVIDE PATH TO MODEL DIRECTORY
@@ -73,6 +76,12 @@ PATH_TO_LABELS = args.labels
 
 # PROVIDE THE MINIMUM CONFIDENCE THRESHOLD
 MIN_CONF_THRESH = float(args.threshold)
+
+# If we want to keep detections
+keepDetections = args.keepDetections
+save_path = os.getcwd() + '/saved_live/'
+if keepDetections and not os.path.exists(save_path) :
+    os.mkdir(save_path)
 
 resW, resH = args.resolution.split('x')
 imW, imH = int(resW), int(resH)
@@ -162,8 +171,17 @@ while True:
     # Draw framerate in corner of frame
     cv2.putText(frame,'FPS: {0:.2f}'.format(frame_rate_calc),(15,25),cv2.FONT_HERSHEY_SIMPLEX,1,(0,255,55),2,cv2.LINE_AA)
     cv2.putText (frame,'Total Detection Count : ' + str(current_count),(15,65),cv2.FONT_HERSHEY_SIMPLEX,1,(0,255,55),2,cv2.LINE_AA)
-    # All the results have been drawn on the frame, so it's time to display it.
-    cv2.imshow('Object Detector', frame)
+    
+    # Si on a au moins une détection et qu'on veut  les sauvegarder :
+    if keepDetections :
+        if current_count > 0 :
+            time_now = datetime.datetime.now().time()
+            saved_frame_name = 'frame_' + str(time_now) + '.jpg'
+            cv2.imwrite(os.path.join(save_path, saved_frame_name), frame)
+    # Sinon
+    else :
+    	# All the results have been drawn on the image, now display the image
+    	cv2.imshow('Object detector', frame)
 
     # Calculate framerate
     t2 = cv2.getTickCount()
@@ -171,7 +189,7 @@ while True:
     frame_rate_calc= 1/time1
 
     # Press 'q' to quit
-    if cv2.waitKey(1) == ord('q'):
+    if cv2.waitKey(0) == ord('q'):
         break
 
 # Clean up

@@ -21,6 +21,7 @@ mv ECONECTsrc/python/tflite $PWD/tflite
 rm -rf ECONECTsrc
 # On peut mettre de nouveaux fichiers .tflite et labelmap.txt dans /home/Documents/tflite/models
 
+
 # ******** Création de l'environnement virtuel : tflite ******** #
 sudo pip3 install virtualenv
 python3 -m venv tflite
@@ -42,21 +43,37 @@ python -c "import tflite_runtime as tf;print(tf.__version__)"  --> Devrait affic
 cd Documents/tflite
 source bin/activate
 
+# Pour faire défiler les images, appuyer sur une flèche ou entrée
+# Pour stopper un script, appuyer sur la touche "Q" (Quit) ou CTRL+Z
+
+# Pour l'inférence sur une image isolée :
+cd Documents/tflite
+python3 TFLite_detection_image.py --modeldir=models/modelV2.tflite --labels=models/labelmap.txt --image=test/2021-01-05-16-08-37.jpg
+
 # Pour l'inférence sur les images de test : (inspiré de https://github.com/EdjeElectronics/TensorFlow-Lite-Object-Detection-on-Android-and-Raspberry-Pi)
 cd Documents/tflite
-python3 TFLite_detection_image.py --modeldir=models/modelV2.tflite --imagedir=test
+python3 TFLite_detection_image.py --modeldir=models/modelV2.tflite --labels=models/labelmap.txt --imagedir=test
+# Si on veut sauvegarder les détections (créé un dossier saved_images) :
+python3 TFLite_detection_image.py --modeldir=models/modelV2.tflite --labels=models/labelmap.txt --imagedir=test --keepDetections=True
 
-# Inférence sur une vidéo avec le SSD 320x320 (TrainV2), avec les détections affichés en temps réel :
+# Inférence sur une vidéo avec le SD 320x320 (TrainV2) avec les détections affichées en temps réel :
 cd Documents/tflite
-python3 TFLite-Video-od.py --model=models/modelV2.tflite --labels=models/labelmap.txt --video=videos/2021-09-16-09-18-27.mp4
+python3 TFLite-VideoFrames-od.py  --model=models/modelV2.tflite --labels=models/labelmap.txt --video=videos/2021-09-16-09-18-27.mp4
+
+# Si on veut sauvegarder les détections (créé un dossier saved_images) :
+python3 TFLite-VideoFrames-od.py --model=models/modelV2.tflite --labels=models/labelmap.txt --video=videos/2021-09-16-09-18-27.mp4 --keepDetections=True
 
 # Inférence sur une vidéo avec le SSD 640x640 FPN Lite (TrainV8) avec les détections affichés en temps réel :
 cd Documents/tflite
-python3 TFLite-Video-od.py --model=models/modelV8.tflite --labels=models/labelmap.txt --video=videos/2021-09-16-09-18-27.mp4
+python3 TFLite-VideoFrames-od.py  --model=models/modelV8.tflite --labels=models/labelmap.txt --video=videos/2021-09-16-09-18-27.mp4
 
-# Inférence sur une vidéo avec le SD 320x320 (TrainV2) avec les détections sauvegardées :
+# Détection en temps réel avec le SSD 320x320 (TrainV2) (détections affichées à la volée) :
 cd Documents/tflite
-python3 TFLite-VideoFrames-od.py  --model=models/modelV2.tflite --labels=models/labelmap.txt --video=videos/2021-09-16-09-18-27.mp4
+python3 TFLite-PiCamera-od.py --model=models/modelV2.tflite --labels=models/labelmap.txt
+
+# Détection en temps réel avec le SSD 320x320 (TrainV2) (détections sauvegardées dans le dossier "saved_live") :
+cd Documents/tflite
+python3 TFLite-PiCamera-od.py --model=models/modelV2.tflite --labels=models/labelmap.txt --keepDetections=True
 
 # Pour évaluer le modèle lite :
 cd Documents/tflite
@@ -74,37 +91,58 @@ TFLite_detection_image.py : (avec des exemples au dessus)
 	--threshold : Seuil minimum de confiance pour afficher les objets (0.65 par défaut)
 	--image : Chemin vers l'unique image à détecter. Si on veut lancer la détection sur un dossier d'images, utiliser l'option --imagedir
 	--edgetpu : pour utiliser un Coral Edge TPU Accelerator
+	--keepDetections=True : Si on souhaite sauvegarder les détections sur les images (dans un dossier "saved_images").
 
-TFLite-Video-od.py : 
+TFLite-VideoFrames-od.py : 
  1) Obligatoires : 
-	--modeldir : Dossier où le fichier .tflite du modèle est situé. 
+	--model : Dossier où le fichier .tflite du modèle est situé. 
 	--labels : Dossier où le fichier labelmap (.txt) est situé.
 	--video : Dossier où la vidéo à détecter se situé. (exemple : videos/2021-09-16-09-18-27.mp4)
  2) Optionnels  :
 	--threshold : Seuil minimum de confiance pour afficher les objets (0.65 par défaut)
-
-TFLite-VideoFrames-od.py : mêmes paramètres que pour TFLite-Video-od.py
+	--keepDetections=True : Si on souhaite sauvegarder les détections sur les frames de la vidéo (dans un dossier "saved_frames").
 
 TFLite-PiCamera-od.py :
  1) Obligatoires : mêmes paramètres Obligatoires que pour TFLite-Video-od.py
  2) Optionnels  :
 	--resolution : Résolution (longueur et largeur). Erreur possible si la caméra ne prend pas en charge la résolution. (1920x1088 par défaut)
+	--keepDetections=True : Si on souhaite sauvegarder les détections sur les frames de la caméra (dans un dossier "saved_live"). 
 
 TFLite_evaluation.py : mêmes paramètres que pour TFLite_detection_image.py
+
+*** Scripts supplémentaires ***
+TFLite_detection_stream.py : mêmes paramètres que pour TFLite-PiCamera-od.py
+TFLite-Video-od.py : mêmes paramètres que pour TFLite-VideoFrames-od.py
 
 *************************************************************
  *** Liste des scripts (avec leurs paramètres ci-dessus) ***
 *************************************************************
-TFLite_detection_image.py : Détection sur un répertoire qui contient des images .JPG : Sauvegarde les détections sur les images.
-TFLite-Video-od.py : Détection sur une seule vidéo (.mp4 ou autre selon opencv) en paramètre : Compte et affiche les détections à la volée.
-TFLite-VideoFrames-od.py : Détection sur une seule vidéo (.mp4 ou autre selon opencv) en paramètre : Compte et sauvegarde les détections (frame par frame).
-			   Ces frames sont sauvegardées dans un dossier "saved_frames" situé au même endroit que le script. Ce dossier contient
-		           un sous-dossier pour chaque vidéo à traiter.
+TFLite_detection_image.py : Détection sur un répertoire qui contient des images .JPG et affiche les détections.
+			    Sauvegarde les détections sur les images avec l'option --keepDetections.
 
-TFLite-PiCamera-od.py : Utilise la Pi Camera pour détecter en temps réel : Compte et affiche les détections à la volée.
-TODO TFLite_detection_stream.py : Utilisation de Thread pour augmenter les FPS de la Pi Camera pour détecter en temps réel : Compte et affiche les détections à la volée.
+TFLite-VideoFrames-od.py : Détection sur une seule vidéo (.mp4 ou autre selon opencv) en paramètre.
+			   Le script compte le nombre de détections et sauvegarde les frames détectées avec l'option --keepDetections.
+			   Ces frames sont sauvegardées dans un dossier "saved_frames" situé au même endroit que le script. 
+			   Ce dossier contient un sous-dossier pour chaque vidéo à traiter.
+			   
 
-TFLite_evaluation.py : Génère un fichier CSV (au même endroit que le script) pour calculer par la suite les métriques de performances (précision et recall) de chaque espèce. Cela
-permet d'évaluer les entraînements de nos 2 modèles sur GPU avec le script tf2_matrice_confusion.py (car plus rapide). Les résultats sont sauvegardés
-manuellement dans un fichier Excel nommé "Precision_Recall_FromCSVManuel.xlsx".
+TFLite-PiCamera-od.py : Utilise la Pi Camera pour détecter en temps réel. 
+			Il compte et sauvegarde les détections dans un fichier CSV (qui a pour nom la date du jour). 
+			Le script sauvegarde les frames détectées avec l'option --keepDetections.
+
+TFLite_evaluation.py : Génère un fichier CSV (au même endroit que le script) pour calculer par la suite les métriques de performances (précision et recall) 
+		       de chaque espèce. Cela permet d'évaluer les entraînements de nos 2 modèles sur GPU avec le script tf2_matrice_confusion.py (car plus rapide sur GPU). 
+		       Les résultats sont sauvegardés manuellement dans un fichier Excel nommé "Precision_Recall_FromCSVManuel.xlsx".
+
+*************************************************************
+ 	       *** Scripts supplémentaires ***
+*************************************************************
+TFLite-Video-od.py : Détection sur une seule vidéo (.mp4 ou autre selon opencv) en paramètre
+		     Compte et affiche les détections à la volée. (pas de sauvegarde de frames ici)
+		     ==> On utilise donc le script TFLite-VideoFrames-od.py.
+
+TFLite_detection_stream.py : Test de Thread pour augmenter les FPS de la Pi Camera en temps réel ===> Mêmes performances que le script TFLite-PiCamera-od.py. 
+		 	     ==> On utilise donc le script TFLite-PiCamera-od.py.
+
+
    

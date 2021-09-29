@@ -29,7 +29,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--modeldir', help='Folder the .tflite file is located in',
                     required=True)
 parser.add_argument('--graph', help='Name of the .tflite file, if different than detect.tflite',
-                    default='model.tflite')
+                    default='detect.tflite')
 parser.add_argument('--labels', help='Name of the labelmap file, if different than labelmap.txt',
                     default='labelmap.txt')
 parser.add_argument('--threshold', help='Minimum confidence threshold for displaying detected objects',
@@ -40,6 +40,8 @@ parser.add_argument('--imagedir', help='Name of the folder containing images to 
                     default=None)
 parser.add_argument('--edgetpu', help='Use Coral Edge TPU Accelerator to speed up detection',
                     action='store_true')
+parser.add_argument('--keepDetections', help='Saves detections (boxes, classes and scores) on images',
+                    default=False)
 
 args = parser.parse_args()
 
@@ -48,6 +50,17 @@ GRAPH_NAME = args.graph
 LABELMAP_NAME = args.labels
 min_conf_threshold = float(args.threshold)
 use_TPU = args.edgetpu
+keepDetections = args.keepDetections
+
+# Si on garde les detections, créé un dossier pour les stocker
+save_path = os.getcwd() + '/saved_images/'
+if keepDetections and not os.path.exists(save_path) :
+    os.mkdir(save_path)
+# Sinon, on supprime les anciennes images
+elif os.path.exists(save_path) and len(os.listdir(save_path)) > 0:
+    filelist = glob.glob(os.path.join(save_path, "*"))
+    for f in filelist:
+        os.remove(f)
 
 # Parse input image name and directory. 
 IM_NAME = args.image
@@ -94,10 +107,10 @@ elif IM_NAME:
     images = glob.glob(PATH_TO_IMAGES)
 
 # Path to .tflite file, which contains the model that is used for object detection
-PATH_TO_CKPT = os.path.join(CWD_PATH,MODEL_NAME,GRAPH_NAME)
+PATH_TO_CKPT = os.path.join(CWD_PATH,MODEL_NAME)
 
 # Path to label map file
-PATH_TO_LABELS = os.path.join(CWD_PATH,MODEL_NAME,LABELMAP_NAME)
+PATH_TO_LABELS = os.path.join(CWD_PATH,LABELMAP_NAME)
 
 # Load the label map
 with open(PATH_TO_LABELS, 'r') as f:
@@ -180,8 +193,14 @@ for image_path in images:
             cv2.rectangle(image, (xmin, label_ymin-labelSize[1]-10), (xmin+labelSize[0], label_ymin+baseLine-10), (255, 255, 255), cv2.FILLED) # Draw white box to put label text in
             cv2.putText(image, label, (xmin, label_ymin-7), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2) # Draw label text
 
-    # All the results have been drawn on the image, now display the image
-    cv2.imshow('Object detector', image)
+    # Si on veut garder les détections :
+    if keepDetections :
+        image_name = os.path.basename(image_path)
+        cv2.imwrite(os.path.join(save_path, image_name), image)
+    # Sinon
+    else :
+    	# All the results have been drawn on the image, now display the image
+    	cv2.imshow('Object detector', image)
 
     # Press any key to continue to next image, or press 'q' to quit
     if cv2.waitKey(0) == ord('q'):

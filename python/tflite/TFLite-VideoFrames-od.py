@@ -22,6 +22,8 @@ parser.add_argument('--video', help='Name of the video to perform detection on',
                     default='videos/2021-09-16-09-18-27.mp4')
 parser.add_argument('--threshold', help='Minimum confidence threshold for displaying detected objects',
                     default=0.65)
+parser.add_argument('--keepDetections', help='Saves detections (boxes, classes and scores) on frames',
+                    default=False)
                     
 args = parser.parse_args()
 
@@ -36,6 +38,9 @@ VIDEO_PATH = args.video
 
 # PROVIDE THE MINIMUM CONFIDENCE THRESHOLD
 MIN_CONF_THRESH = float(args.threshold)
+
+# Save detections on frames or not
+keepDetections = args.keepDetections
 
 import time
 print('Loading model...', end='')
@@ -81,7 +86,7 @@ print('Durée de la vidéo : ', number_of_frames/fps, ' secondes')
 
 # Dossier pour sauvegarder les frames (le créé s'il n'existe pas) :
 frame_path = os.getcwd() + '/saved_frames/'
-if not os.path.exists(frame_path):
+if keepDetections and not os.path.exists(frame_path):
   os.mkdir(frame_path)
 
 # Les frames sont sauvegardées dans un dossier qui a le même nom que la vidéo courante
@@ -181,20 +186,25 @@ while(video.isOpened()):
           timestamp = timedelta(milliseconds=milliseconds)
           # Sauvegarde la frame avec les détections et le temps sur la vidéo (si ce temps n'est pas nul)
           # TODO les 5 ou 6 dernières frames ont un temps égal à 0.0 avec cv2 ???
-          if milliseconds != 0.0:
+          if milliseconds != 0.0 and keepDetections:
             # temps de la frame ==> str(timestamp)
             saved_frame_name = 'frame_' + str(int(frame_number)) + '.jpg'
             cv2.imwrite(os.path.join(frame_path, saved_frame_name), frame)
+          elif not keepDetections:
+	    # Affiche les détections à la volée
+            cv2.imshow('Object detector', frame)
 
         # Press 'q' to quit
-        if cv2.waitKey(1) == ord('q'):
+        if cv2.waitKey(0) == ord('q'):
             break
 
     else:
         video.release()
 
 # Affichage finaux
-print('Saved frames : ', len(os.listdir(frame_path)))
+if os.path.exists(frame_path):
+  print('Saved frames : ', len(os.listdir(frame_path)))
+
 total_seconds = number_of_frames / frame_rate_calc
 print('Average total time :', timedelta(seconds=total_seconds))
 print('Detected species : ', counting_detections)
