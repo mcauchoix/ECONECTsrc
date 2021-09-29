@@ -56,8 +56,8 @@
   # Créer les répertoires pour les images et les annotations
   mkdir -p /Users/maximecauchoix/Documents/ECONECT/ECONECTsrc/python/SSD\ MobileNet\ V2\ Custom/tf2/workspace/training_demo/images/JPEGImages
   mkdir -p /Users/maximecauchoix/Documents/ECONECT/ECONECTsrc/python/SSD\ MobileNet\ V2\ Custom/tf2/workspace/training_demo/images/Annotations
-  # à partir du dossier parent de "raw_data" et "annotations"
-
+  
+  #  À partir du dossier parent de "raw_data" et "annotations"
   find raw_data -iname '*.jpg' -exec mv --backup=numbered -t /Users/maximecauchoix/Documents/ECONECT/ECONECTsrc/python/SSD\ MobileNet\ V2\ Custom/tf2/workspace/training_demo/images/JPEGImages {} +
   find annotations -name '*.xml' -exec mv --backup=numbered -t /Users/maximecauchoix/Documents/ECONECT/ECONECTsrc/python/SSD\ MobileNet\ V2\ Custom/tf2/workspace/training_demo/images/Annotations {} +
 
@@ -191,7 +191,9 @@ python export_tflite_graph_tf2.py ^
   --trained_checkpoint_dir C:\tensorflow1\models\research\object_detection\training ^
   --output_directory exported-models\my_tflite_model_2
 
-python convert-to-tflite.py --model exported-models/my_tflite_model_2/saved_model --output exported-models/my_tflite_model_2
+python convert-to-tflite.py ^
+  --model exported-models/my_tflite_model_2/saved_model ^
+  --output exported-models/my_tflite_model_2
 
 ****************************************************************************************************************
 **** Evaluation du modèle ****

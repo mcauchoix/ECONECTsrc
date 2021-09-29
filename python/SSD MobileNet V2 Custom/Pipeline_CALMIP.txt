@@ -27,10 +27,17 @@ module avail tensorflow
 # Environnements pré-configurés disponibles :
 conda env list
 
+#module purge
+#module load conda/4.9.2 cuda/11.2
+#conda create -p /tmpdir/DONNEEST21001/tensorflow --clone tensorflow-2.4.1
+#conda activate /tmpdir/DONNEEST21001/tensorflow
+
 module purge
-module load conda/4.9.2 cuda/11.0
-conda create -p /tmpdir/DONNEEST21001/tensorflow --clone tensorflow-2.4.1
-conda activate /tmpdir/DONNEEST21001/tensorflow
+module load conda/4.9.2
+module load cuda/11.2
+conda create -n tf2 --clone python-tools-3.9.5
+conda activate tf2
+conda update --all
 
 ****************************************************************************************************************
 *************************************** À n'éxecuter qu'une seule FOIS ! ***************************************
@@ -49,19 +56,18 @@ cd models/research
 protoc object_detection/protos/*.proto --python_out=.
 
 conda deactivate
-conda activate /tmpdir/DONNEEST21001/tensorflow
+#conda activate /tmpdir/DONNEEST21001/tensorflow
+conda activate tf2
 pip install cython
 pip install git+https://github.com/philferriere/cocoapi.git#subdirectory=PythonAPI
 
 cp object_detection/packages/tf2/setup.py .
-python -m pip install --use-feature=2020-resolver .
+python -m pip install --user --use-feature=2020-resolver .
 
+pip install --upgrade tensorflow-gpu==2.5.0
 pip install IPython
 pip install seaborn
-pip install tensorflow==2.5.0
 pip install numpy==1.17.3 --user
-#pip uninstall keras
-#pip install keras --upgrade
 pip install -U scikit-learn
 pip install pandas
 
@@ -69,6 +75,7 @@ pip install pandas
 cd /tmpdir/DONNEEST21001/example
 sbatch script.slurm
 
+###########################################################################
 # Clone Gitlab en local ==> Zipper les dossiers raw_data et annotations (zip ou tar)
 # Puis SCP sur CALMIP (cf. https://www.calmip.univ-toulouse.fr/spip.php?article724)
 # Dans le répertoire de l'utilisateur courant
@@ -95,9 +102,9 @@ ls . | wc -l
 # Execution des scripts pour les données et réseaux de neurones
 
 module purge
-module load conda/4.9.2 cuda/11.0
+module load conda/4.9.2 
+module load cuda/11.2
 conda activate tf2
-cd /tmpdir/DONNEEST21001/tf2/scripts/preprocessing
 
 # Répartir les données de TRAIN et TEST ==> Contrôler la valeur de la seed (random_state) dans le fichier train_test_splitter.py
 # si on ne met pas de liste de TASKS en TEST
@@ -156,15 +163,22 @@ mkdir SSD_Mbnet_v2_CVAT_07_09
 # Note : Bien remplacer les champs label_map_path avec le chemin vers la bonne labelmap, exemple : "annotations/labelmap_14especes.pbtxt"
 #        Ainsi que le modèle pré-entraîné dont les poids initialisent l'entraînement : fine_tune_checkpoint avec le bon chemin vers le modèle à entraîner
 
+# Et modifier les CHEMINS dans les paramètres du programme Python dans le script training.slurm
+
 ****************************************************************************************************************
 ** Avant chaque script ci-dessous, on active l'environnement et on se place dans le bon répertoire de travail **
 ****************************************************************************************************************
-conda activate /tmpdir/DONNEEST21001/tensorflow
 cd /tmpdir/DONNEEST21001/tf2
 ****************************************************************************************************************
 # Lancement de l'entrainement :
 sbatch training.slurm
 
+# Exporter le modèle en TF2 puis TF Lite :
+sbatch export_model.slurm
+
+****************************************************************************************************************
+************************************* Commandes propres aux jobs CALMIP  ***************************************
+****************************************************************************************************************
 # Pour voir si la tâche est toujours en cours d'exécution :
 squeue -u $USER
 
