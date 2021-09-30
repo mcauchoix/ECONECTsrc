@@ -4,8 +4,9 @@ Calculateur de l'UT3 :
 Utilisateur  : gimenez (Florent Gimenez, florent.gmz@gmail.com)
 New MDP : 97.
 
-Espace perso : /olympe1/t21001/gimenez
-Espace partagé : /tmpdir/DONNEEST21001
+Espace perso (espace disque limité => QUOTA) : /olympe1/t21001/gimenez
+Espace de travail : /tmpdir/DONNEEST21001
+Espace partagé (espace disque limité => QUOTA) : /users/t21001/partage
 
 Aller sur https://vpn.calmip.univ-toulouse.fr/auth/ et saisir le nom d'utilisateur
 Une fois connecté, télécharger le fichier .jnlp sur https://vpn.calmip.univ-toulouse.fr/auth/xvpnc.jnlp
@@ -17,15 +18,6 @@ javaws xvpnc_1631653059.jnlp
 # Connexion sur la frontale dans le SHELL MobaXTerm : 
 ssh -YX -p 11300 gimenez@127.0.0.1
 
-** PIPELINE pour TF2 Object Detection **
-# à n'executer que si 
-module purge
-module load conda/4.9.2
-module load cuda/11.2
-conda create -p /users/t21001/partage/tf2 --clone python-tools-3.9.5
-conda activate /users/t21001/partage/tf2
-conda update --all
-
 ****************************************************************************************************************
 *************************************** À n'éxecuter qu'une seule FOIS ! ***************************************
 ****************************************************************************************************************
@@ -35,28 +27,29 @@ mv ECONECTsrc/python/SSD\ MobileNet\ V2\ Custom/tf2 /tmpdir/DONNEEST21001
 
 cd /tmpdir/DONNEEST21001/tf2
 git clone https://github.com/tensorflow/models.git
-****************************************************************************************************************
-****************************************************************************************************************
 
+# NOTE : Pour donner les droits sur le dossier tf2 à un autre utilsateur : chmod -R 777 tf2
+
+****************************************************************************************************************
+****************************************************************************************************************
+** PIPELINE pour TF2 Object Detection **
+# à n'executer que si l'environnement virtuel n'existe pas
+module purge
+module load conda/4.9.2
+module load cuda/11.2
+conda create -p /tmpdir/DONNEEST21001/virtualenv_tf2 --clone python-tools-3.9.5
+conda activate /tmpdir/DONNEEST21001/virtualenv_tf2
+conda update --all
+
+cd /tmpdir/DONNEEST21001/tf2
 conda install -c anaconda protobuf
 cd models/research
 protoc object_detection/protos/*.proto --python_out=.
 
 conda deactivate
-#conda activate /tmpdir/DONNEEST21001/tensorflow
-conda activate tf2
-pip install cython
-pip install git+https://github.com/philferriere/cocoapi.git#subdirectory=PythonAPI
-
-cp object_detection/packages/tf2/setup.py .
-python -m pip install --user --use-feature=2020-resolver .
-
-pip install --upgrade tensorflow-gpu==2.5.0
-pip install IPython
-pip install seaborn
-pip install numpy==1.17.3 --user
-pip install -U scikit-learn
-pip install pandas
+conda activate /tmpdir/DONNEEST21001/virtualenv_tf2
+cd /tmpdir/DONNEEST21001/tf2/models/research
+bash /tmpdir/DONNEEST21001/tf2/install_prerequisites.sh
 
 # Teste si la configuration est correcte :
 cd /tmpdir/DONNEEST21001/example
@@ -87,20 +80,18 @@ ls . | wc -l
 
 ###########################################################################
 # Execution des scripts pour les données et réseaux de neurones
-
-module purge
-module load conda/4.9.2 
-module load cuda/11.2
-conda activate tf2
-
+************************************************************************************
+ATTENTION : Les commandes python ci-dessous ne sont que des EXEMPLES !
+            On utilise la commande : sbatch generate_tfrecord.slurm
+            pour générer les données
+************************************************************************************
 # Répartir les données de TRAIN et TEST ==> Contrôler la valeur de la seed (random_state) dans le fichier train_test_splitter.py
 # si on ne met pas de liste de TASKS en TEST
-# Note : Pour faire une commande sur plusieurs lignes : On met des "\" à chaque fin de ligne sur Linux
 python train_test_splitter.py \
 --annotations=../../workspace/training_demo/images/Annotations/ \
 --images=../../workspace/training_demo/images/JPEGImages/ \
---testsize=0.2
---outputdir=../../workspace/training_demo/images/ \
+--testsize=0.2 \
+--outputdir=../../workspace/training_demo/images/
 
 # si on VEUT une liste de TASKS en TEST :
 # ou si on en exclut plusieurs --> -t balacet lab UPS
@@ -109,6 +100,7 @@ python train_test_splitter.py \
 --images=../../workspace/training_demo/images/JPEGImages/ \
 --outputdir=../../workspace/training_demo/images/ \
 -t balacet
+************************************************************************************
 
 # A partir de maintenant, on a besoin de Tensorflow GPU donc on doit utiliser un script SLURM pour réserver des ressources
 # Lancement des calculs sur CALMIP :
@@ -122,7 +114,7 @@ python comptage_especes.py
 ****************************************************************************************************************
 *************************************** À n'éxecuter qu'une seule FOIS ! ***************************************
 ****************************************************************************************************************
-# Récupération des modèles pré-entrainés :
+# Récupération des modèles pré-entrainés (ne pas faire si on les a déjà) :
 cd /tmpdir/DONNEEST21001/tf2/workspace/training_demo/pre-trained-models
 wget -c http://download.tensorflow.org/models/object_detection/tf2/20200711/ssd_mobilenet_v2_320x320_coco17_tpu-8.tar.gz -O - | tar -xz
 wget -c http://download.tensorflow.org/models/object_detection/tf2/20200711/ssd_mobilenet_v2_fpnlite_640x640_coco17_tpu-8.tar.gz -O - | tar -xz
@@ -160,10 +152,8 @@ cd /tmpdir/DONNEEST21001/tf2
 # ATTENTION : il faut modifier le dossier du modèle à entraîner ainsi que la labelmap 
 # dans le fichier pipeline.config, ainsi que dans le script SLURM 
 # Lancement de l'entrainement avec batch_size = 8 --> Temps ~= 50 min
-sbatch training.slurm
-
 # Lancement de l'entrainement avec batch_size = 64 --> Temps ~= 2h50
-sbatch training2.slurm
+sbatch training.slurm
 
 # Exporter le modèle en TF2 puis TF Lite :
 sbatch export_model.slurm
