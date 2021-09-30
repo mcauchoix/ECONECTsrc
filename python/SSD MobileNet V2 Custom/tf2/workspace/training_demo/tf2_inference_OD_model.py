@@ -14,91 +14,14 @@ The notebook is split into the following parts:
 * Export model inference graph
 * Test trained model
 """
-"""
-batch_size = 16
-num_steps = 8000
-num_eval_steps = 1000
-fine_tune_checkpoint = 'efficientdet_d0_coco17_tpu-32/checkpoint/ckpt-0'
-base_config_path = 'ssd_efficientdet_d0_512x512_coco17_tpu-8.config'
-# TODO automatiser la création du fichier labelmap.pbtxt : https://github.com/nicknochnack/TensorflowObjectDetectionMetrics/blob/main/Tutorial-Walkthrough.ipynb
-# TODO automatiser modif config
-# edit configuration file (from https://colab.research.google.com/drive/1sLqFKVV94wm-lglFq_0kGo2ciM0kecWD)
-import re
-
-with open(base_config_path) as f:
-    config = f.read()
-
-with open('model_config.config', 'w') as f:
-  
-  # Set labelmap path
-  config = re.sub('label_map_path: ".*?"', 
-             'label_map_path: "{}"'.format(labelmap_path), config)
-  
-  # Set fine_tune_checkpoint path
-  config = re.sub('fine_tune_checkpoint: ".*?"',
-                  'fine_tune_checkpoint: "{}"'.format(fine_tune_checkpoint), config)
-  
-  # Set train tf-record file path
-  config = re.sub('(input_path: ".*?)(PATH_TO_BE_CONFIGURED/train)(.*?")', 
-                  'input_path: "{}"'.format(train_record_path), config)
-  
-  # Set test tf-record file path
-  config = re.sub('(input_path: ".*?)(PATH_TO_BE_CONFIGURED/val)(.*?")', 
-                  'input_path: "{}"'.format(test_record_path), config)
-  
-  # Set number of classes.
-  config = re.sub('num_classes: [0-9]+',
-                  'num_classes: {}'.format(4), config)
-  
-  # Set batch size
-  config = re.sub('batch_size: [0-9]+',
-                  'batch_size: {}'.format(batch_size), config)
-  
-  # Set training steps
-  config = re.sub('num_steps: [0-9]+',
-                  'num_steps: {}'.format(num_steps), config)
-  
-  # Set fine-tune checkpoint type to detection
-  config = re.sub('fine_tune_checkpoint_type: "classification"', 
-             'fine_tune_checkpoint_type: "{}"'.format('detection'), config)
-  
-  f.write(config)
-
-model_dir = 'training/'
-pipeline_config_path = 'model_config.config'
-
-## Train detector
-!python /content/models/research/object_detection/model_main_tf2.py \
-    --pipeline_config_path={pipeline_config_path} \
-    --model_dir={model_dir} \
-    --alsologtostderr \
-    --num_train_steps={num_steps} \
-    --sample_1_of_n_eval_examples=1 \
-    --num_eval_steps={num_eval_steps}
-
-# Commented out IPython magic to ensure Python compatibility.
-# %load_ext tensorboard
-# %tensorboard --logdir '/content/training/train'
-
-## Export model inference graph
-output_directory = 'inference_graph'
-!python /content/models/research/object_detection/exporter_main_v2.py \
-    --trained_checkpoint_dir {model_dir} \
-    --output_directory {output_directory} \
-    --pipeline_config_path {pipeline_config_path}
-
-saved_model_path = '{output_directory}/saved_model/saved_model.pb'
 
 ## Test trained model on test images
 ## based on [Object Detection API Demo](https://github.com/tensorflow/models/blob/master/research/object_detection/colab_tutorials/object_detection_tutorial.ipynb) and [Inference from saved model tf2 colab](https://github.com/tensorflow/models/blob/master/research/object_detection/colab_tutorials/inference_from_saved_model_tf2_colab.ipynb).
-"""
 
 """
 Pour lancer ce programme d'inférence :
-
-conda activate tf2
-cd C:\tf2\workspace\training_demo
-python tf2_inference_OD_model.py
+cd /tmpdir/DONNEEST21001/tf2
+sbatch tf2_inference.slurm
 """
 
 import io
@@ -125,7 +48,6 @@ from object_detection.utils import label_map_util
 from object_detection.utils import visualization_utils as viz_utils
 
 import tkinter
-matplotlib.use('Tkagg')  # affichage des images en mode GPU
 
 # Ignore Tensorflow WARNING and INFO
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
@@ -151,7 +73,7 @@ def count_images_by_species():
   
   for folder in ['train','test']:
     # Récupération des fichiers CSV pour train et test
-    CSV_path = 'annotations/' + folder + '.csv'
+    CSV_path = '/tmpdir/DONNEEST21001/tf2/workspace/training_demo/annotations/' + folder + '.csv'
     df = pd.read_csv(CSV_path)
     class_count = df["class"].value_counts()
     print("Pour le " + folder + " :\n", class_count)
@@ -171,7 +93,7 @@ def count_images_by_species():
 
 def load_groundtruths_on_Test(filename):
   # Récupération des fichiers CSV pour train et test
-  CSV_path = 'annotations/test.csv'
+  CSV_path = '/tmpdir/DONNEEST21001/tf2/workspace/training_demo/annotations/test.csv'
   df = pd.read_csv(CSV_path)
   all_rows = df.loc[df['filename'] == filename]  # toutes les lignes qui correspondent à l'image courante
 
@@ -299,11 +221,11 @@ def show_inference_perso(model, image_path, threshold, saveImg, espece):
           (right-marginRight, bottom-marginBottom),
           species,
           fill='white',
-          font = ImageFont.truetype("arial.ttf", 28))
+          font = ImageFont.truetype(current_dir + "arial.ttf", 28))
 
     #img_annotee.show()
     #input('W8')
-    # Copie les changements sur l'image avec les prédictions
+    # Copie les vérités terrain sur l'image avec les prédictions
     np.copyto(image_np_with_annotations, np.array(img_annotee)) 
 
     # Affichage des labels en légende
@@ -312,11 +234,12 @@ def show_inference_perso(model, image_path, threshold, saveImg, espece):
     # Affichage ou sauvegarde des résultats
     if saveImg:
       # Créé un dossier pour sauvegarder l'espèce courante
-      if not os.path.exists(espece):
-        os.makedirs(espece)
+      if not os.path.exists(current_dir + espece):
+        os.makedirs(current_dir + espece)
       # Sauvegarde de l'image dans le dossier de l'espèce courante
       # Le dossier de la sauvegarde est situé au même endroit que ce programme Python !
-      plt.imsave(espece + '\\' + image_name, image_np_with_annotations)
+      plt.subplots_adjust(right=0.7)
+      plt.imsave(current_dir + espece + '/' + image_name, image_np_with_annotations)
     else:
       """
       # Ajoute les vérités terrains des annotations, dans des rectangles en haut à droite des boxes annotées
@@ -338,8 +261,8 @@ def show_inference_perso(model, image_path, threshold, saveImg, espece):
       """
 
       # Affichage de l'image et des oiseaux reconnus avec leurs scores en plein écran
-      wm = plt.get_current_fig_manager()
-      wm.window.state('zoomed')
+      #wm = plt.get_current_fig_manager()
+      #wm.window.state('zoomed')
       plt.imshow(Image.fromarray(image_np_with_annotations))
       plt.show()
 
@@ -365,7 +288,7 @@ def inference_random_N_Images_Especes(seuil, species_images, saveImg=None, espec
   elapsed_time = []
   # Parcours des N images aléatoires pour l'espèce courante
   for i in species_images:
-    image_path = os.getcwd() + '\\images\\test\\' + i
+    image_path = current_dir + '/images/test/' + i
     elapsed_time = show_inference_perso(model, image_path, seuil, saveImg = saveImg, espece = espece)
   # Temps moyen (en secondes) par image pour la détéction et classification
   if elapsed_time != []:
@@ -379,14 +302,16 @@ def inference_random_N_Images_Especes(seuil, species_images, saveImg=None, espec
 # Chemins vers nos fichiers
 #########################################################################
 # TODO : valeurs par défaut + passage en param ...
-current_dir = os.getcwd()
-test_images_dir = current_dir + '\\images\\test\\'
-train_record_path = current_dir + '\\annotations\\train.record'
-test_record_path = current_dir + '\\annotations\\test.record'
+current_dir = os.getcwd() + '/workspace/training_demo/'  # modifier le chemin en fonction de l'emplacement du script SLURM (tf2_inference.slurm)
+test_images_dir = current_dir + '/images/test/'
+train_record_path = current_dir + '/annotations/train.record'
+test_record_path = current_dir + '/annotations/test.record'
 
-labelmap_name = 'labelmap_12especes.pbtxt' # si on a les MESCHA : TrainV2 à V4 et TrainV6
+
+#labelmap_name = 'labelmap_12especes.pbtxt' # si on a les MESCHA : TrainV2 à V4 et TrainV6
 #labelmap_name = 'labelmap_sansMESCHA.pbtxt' # TrainV5 => TODO param  of program !
-labelmap_path = current_dir + '\\annotations\\' + labelmap_name  # la labelmap d'entrainement sous forme d'objets
+labelmap_name = 'labelmap_14especes.pbtxt'
+labelmap_path = current_dir + '/annotations/' + labelmap_name  # la labelmap d'entrainement sous forme d'objets
 
 #########################################################################
 # Récupération des labels pour nos classes
@@ -416,15 +341,16 @@ handles.append(mpatches.Patch(color='red', label='Labels'))
 tf.keras.backend.clear_session()
 # TODO param of program !
 #exported_model_name = 'TF2_ExportedModel_TrainV8'
-exported_model_name = 'SSD_320x320_trainV2'
-exported_model_folder = "exported-models\\" + exported_model_name + "\\saved_model"
-model = tf.saved_model.load(current_dir + '\\' + exported_model_folder)
+#exported_model_name = 'SSD_320x320_trainV2'
+exported_model_name = 'SSD_8'
+exported_model_folder = "/exported-models/" + exported_model_name + "/saved_model"
+model = tf.saved_model.load(current_dir + exported_model_folder)
 
 #########################################################################
 # Inférence sur N images random, parmi toutes les espèces
 #########################################################################
 """
-test_images_dir = current_dir + '\\images\\test\\*.jpg'
+test_images_dir = current_dir + '/images/test/*.jpg'
 seuil = 0.65
 N_images = 5  # N_images = len(os.listdir(test_images_dir))  si on veut le faire sur toutes les images de test
 inference_random_N_Images(test_images_dir, seuil, N_images)
@@ -469,25 +395,10 @@ def N_random_per_species(N_images, saveImg=None):
         # 3 MESCHA en inférence pour comparer les SSD : ['2021-06-12-06-10-07.jpg']
         #inference_random_N_Images_Especes(seuil, ['2021-06-12-06-10-03.jpg', '2021-06-12-06-10-07.jpg'])
 
-
 # TODO : passer en argument du programme les paramètres
 #N_images = 10
 N_images = len(os.listdir(test_images_dir))  # si on veut le faire sur toutes les images de test
-N_random_per_species(N_images)  # sans sauvegarder les résultats de l'inférence
-#N_random_per_species(N_images, True) # si on sauvegarder les images avec les boxes prédites/annotées
 
-
-""" Elapsed time: 0.03820490837097168 second per image sur GPU """
-# ==> Données de validation ? pour voir les val_loss et acc_loss sur Tensorboard et détecter l'overfitting ?
-# train_test_split() mélange aléatoirement toutes les données avant de les séparer en 2 groupes : TRAIN et TEST
-# ==> Comparer les métriques obtenues avec train_test_split() VS K-Fold qui permet d'avoir différents "jours" en TRAIN et en TEST
-"""
-Accuracy, IoU, globale, par espèces, par attribut: sex, behaviour..., avec différent training design: kfold sur les jours/site, random etc...)
-# ==> Pour évaluer selon espèces => données triées avec train_test_split()
-#     même méthode si on veut évaluer les données selon le sexe ? => !!! trier les sexes "unknown" comme pour les espèces dans xml_to_csv.py
-# => Plusieurs TRAIN ==> scripts CALMIP ?
-"""
-# TODO corriger annotations :
-# 2021-01-05-16-15-17.jpg ça aussi c'est une bleu
-# ça 2021-01-06-12-12-47.jpg ça ressemble effectivement plus à de la bleu
-# sur 2021-01-06-11-12-29.jpg
+# Pour CALMIP, le comportement par défaut est de sauvegarder les détections sur les images
+# Car il n'y a pas possibilité d'afficher des résultats graphiques
+N_random_per_species(N_images, True) # si on sauvegarde les images avec les boxes prédites/annotées

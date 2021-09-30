@@ -21,14 +21,14 @@ conda activate tf2
 EXE=/tmpdir/DONNEEST21001/tf2/workspace/training_demo/exporter_main_v2.py
 
 # Variables pour les paramètres du programme python à modifier en fonction du modèle entrainé !!
-# Nom du dossier pour l'exportation à modifier (SSD_8 ici) !!
+# Nom du dossier pour l'exportation à modifier (SSD_64 ici) !!
 INPUT_TYPE=image_tensor
-PIPELINE_CONFIG_PATH=/tmpdir/DONNEEST21001/tf2/workspace/training_demo/models/SSD_8/pipeline.config
-TRAINED_CKPT_PREFIX=/tmpdir/DONNEEST21001/tf2/workspace/training_demo/models/SSD_8
+PIPELINE_CONFIG_PATH=/tmpdir/DONNEEST21001/tf2/workspace/training_demo/models/SSD_64/pipeline.config
+TRAINED_CKPT_PREFIX=/tmpdir/DONNEEST21001/tf2/workspace/training_demo/models/SSD_64
 
 # Dossier pour l'exportation du modèle
 # mkdir -p créer se dossier s'il n'existe pas
-EXPORT_DIR=/tmpdir/DONNEEST21001/tf2/workspace/training_demo/exported-models/SSD_8
+EXPORT_DIR=/tmpdir/DONNEEST21001/tf2/workspace/training_demo/exported-models/SSD_64
 mkdir -p $EXPORT_DIR
 
 #######################################
@@ -40,7 +40,6 @@ python $EXE \
 --pipeline_config_path=${PIPELINE_CONFIG_PATH} \
 --trained_checkpoint_dir=${TRAINED_CKPT_PREFIX} \
 --output_directory=${EXPORT_DIR}
-echo 'Fin 1'
 
 ##########################################
 # Exporte le modèle pour Tensorflow Lite #
@@ -49,19 +48,18 @@ echo 'Fin 1'
 EXE=/tmpdir/DONNEEST21001/tf2/workspace/training_demo/export_tflite_graph_tf2.py
 
 # Variables pour les paramètres du programme python à modifier en fonction du modèle entrainé !!
-# Nom du dossier pour l'exportation à modifier (SSD_8_lite ici) !!
+# Nom du dossier pour l'exportation à modifier (SSD_64_lite ici) !!
 # mkdir -p créer se dossier s'il n'existe pas
-EXPORT_DIR=/tmpdir/DONNEEST21001/tf2/workspace/training_demo/exported-models/SSD_8_lite
+EXPORT_DIR=/tmpdir/DONNEEST21001/tf2/workspace/training_demo/exported-models/SSD_64_lite
 mkdir -p $EXPORT_DIR
 
-MODEL_WEIGHTS=/tmpdir/DONNEEST21001/tf2/workspace/training_demo/exported-models/SSD_8_lite/saved_model
+MODEL_WEIGHTS=/tmpdir/DONNEEST21001/tf2/workspace/training_demo/exported-models/SSD_64_lite/saved_model
 
 # Exporte les derniers poids du modèle (version TF Lite) avec les mêmes paramètres qu'au début
 python $EXE \
 --pipeline_config_path=${PIPELINE_CONFIG_PATH} \
 --trained_checkpoint_dir=${TRAINED_CKPT_PREFIX} \
 --output_directory=${EXPORT_DIR}
-echo 'Fin 2'
 
 # Création du fichier .tflite avec les paramètres ci-dessus
 EXE=/tmpdir/DONNEEST21001/tf2/workspace/training_demo/convert-to-tflite.py
@@ -69,6 +67,5 @@ EXE=/tmpdir/DONNEEST21001/tf2/workspace/training_demo/convert-to-tflite.py
 python $EXE \
 --model=${MODEL_WEIGHTS}  \
 --output=${EXPORT_DIR}
-echo 'Fin 3'
 
 # END OF SBATCH SCRIPT ----------------

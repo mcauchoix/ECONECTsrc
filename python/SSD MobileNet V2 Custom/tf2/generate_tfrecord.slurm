@@ -1,11 +1,11 @@
 #! /bin/bash
 
-#SBATCH -N 1
-#SBATCH -n 9
+#SBATCH -N 2
+#SBATCH -n 72
+#SBATCH --ntasks-per-node=36
 #SBATCH --ntasks-per-core=1
-#SBATCH --mem 50G
-#SBATCH --gres=gpu:1
-#SBATCH --time=01:00:00
+#SBATCH --gres=gpu:4
+#SBATCH --time=1:00:00
 
 # Charge les modules prédéfinis
 module purge

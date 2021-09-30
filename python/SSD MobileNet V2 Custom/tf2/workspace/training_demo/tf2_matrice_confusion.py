@@ -34,7 +34,6 @@ from object_detection.utils import label_map_util
 from object_detection.utils import visualization_utils as viz_utils
 
 import tkinter
-matplotlib.use('Tkagg')  # affichage des images en mode GPU
 
 # Ignore Tensorflow WARNING and INFO
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
@@ -60,7 +59,7 @@ def count_images_by_species():
   
   for folder in ['train','test']:
     # Récupération des fichiers CSV pour train et test
-    CSV_path = 'annotations/' + folder + '.csv'
+    CSV_path = '/tmpdir/DONNEEST21001/tf2/workspace/training_demo/annotations/' + folder + '.csv'
     df = pd.read_csv(CSV_path)
     class_count = df["class"].value_counts()
     print("Pour le " + folder + " :\n", class_count)
@@ -79,7 +78,7 @@ def count_images_by_species():
 
 def load_groundtruths_on_Test(filename):
   # Récupération des fichiers CSV pour train et test
-  CSV_path = 'annotations/test.csv'
+  CSV_path = '/tmpdir/DONNEEST21001/tf2/workspace/training_demo/annotations/test.csv'
   df = pd.read_csv(CSV_path)
   all_rows = df.loc[df['filename'] == filename]  # toutes les lignes qui correspondent à l'image courante
 
@@ -149,94 +148,14 @@ def run_inference_for_single_image(model, image, elapsed_time):
 
   return output_dict, elapsed_time, predicted_classes
 
-def show_inference_perso(model, image_path, threshold, saveImg, espece):
-  # the array based representation of the image will be used later in order to prepare the
-  # result image with boxes and labels on it.
-  image = Image.open(image_path)
-  image_np = load_image_into_numpy_array(image) # numpy array with shape [height, width, 3]
-  image_np_with_annotations = image_np.copy()
-
-  # Load groundtruths : on ne garde que le nom de l'image courante à partir du chemin
-  image_name = os.path.basename(image_path)
-  groundtruths = load_groundtruths_on_Test(image_name)
-
-  # Actual detection.
-  output_dict, elapsed_time, predicted_classes = run_inference_for_single_image(model, image_np_with_annotations, [])
-
-  # Visualization of the results of a detection.
-  viz_utils.visualize_boxes_and_labels_on_image_array(
-      image_np_with_annotations,
-      output_dict['detection_boxes'],
-      output_dict['detection_classes'],
-      output_dict['detection_scores'],
-      category_index,
-      # on n'a pas plus de 3 ou 4 oiseaux en simultané
-      #max_boxes_to_draw=4,
-      instance_masks=output_dict.get('detection_masks_reframed', None),
-      line_thickness=4,
-      use_normalized_coordinates=True,
-      min_score_thresh=threshold,
-      agnostic_mode=False)
-
-  # Affichage des vérités terrain == annotations ou groundtruths
-  fig, ax = plt.subplots()
-  ax.set_title('Appuyer sur "Q" pour défiler')
-
-  for gt in groundtruths:
-    # Extrait les 4 coordonnées pour chaque box
-    ymin, xmin, ymax, xmax, species = gt
-    viz_utils.draw_bounding_box_on_image_array(
-        image_np_with_annotations, 
-        ymin, 
-        xmin, 
-        ymax, 
-        xmax, 
-        color='red', 
-        thickness=2,
-        use_normalized_coordinates=False)
-
-    # Ajoute les vérités terrains des annotations, dans des rectangles en haut à droite des boxes annotées
-    (left, right, top, bottom) = (xmin, xmax, ymin, ymax)
-
-    # Positionne le rectangle dans le coin supérieur droit
-    marginRight = 120
-    rect = mpatches.Rectangle((right-marginRight, top), marginRight, 30, linewidth=2, edgecolor='r', facecolor='r')
-    ax.add_patch(rect)
-    
-
-    # Ajout de l'espèce dans le rectangle
-    rx, ry = rect.get_xy()
-    cx = rx + rect.get_width()/2.0
-    cy = ry + rect.get_height()/2.0
-    ax.annotate(species, (cx, cy), color='black', weight='bold', 
-                fontsize=10, ha='center', va='center')
-
-  # Affichage des labels en légende
-  plt.legend(handles=handles)
-
-  # Affichage ou sauvegarde des résultats
-  if saveImg:
-    # Créé un dossier pour sauvegarder l'espèce courante
-    if not os.path.exists(espece):
-      os.makedirs(espece)
-    # Sauvegarde de l'image dans le dossier de l'espèce courante
-    # Le dossier de la sauvegarde est situé au même endroit que ce programme Python !
-    plt.imsave(espece + '\\' + image_name, image_np_with_annotations)
-  else:
-    # Affichage de l'image et des oiseaux reconnus avec leurs scores en plein écran
-    wm = plt.get_current_fig_manager()
-    wm.window.state('zoomed')
-    plt.imshow(Image.fromarray(image_np_with_annotations))
-    plt.show()
-
-  return elapsed_time
-
+# Construit le fichier CSV d'évaluation par espèce
 def construct_evaluation_CSV(data, image_path):
   # Pour chaque espèce on a une nouvelle ligne dans le CSV : liste d'images 
   # Pour chaque image on a le comptage des espèces annotées et détectées
 
-  dict = {'ImageName': [], 'MESCHA_A' : 0, 'ECUROU_A' : 0,  'VEREUR_A' : 0, 'MESBLE_A' : 0, 'PIEBAV_A' : 0, 'MESNON_A' : 0, 'SITTOR_A' : 0, 'ACCMOU_A' : 0, 'ROUGOR_A' : 0, 'TOUTUR_A' : 0, 'PINARB_A' : 0, 'MOIDOM_A' : 0, 
-      'MESCHA_CV' : 0,  'ECUROU_CV' : 0,  'VEREUR_CV' : 0,  'MESBLE_CV' : 0,  'PIEBAV_CV' : 0,  'MESNON_CV' : 0,  'SITTOR_CV' : 0,  'ACCMOU_CV' : 0,  'ROUGOR_CV' : 0,  'TOUTUR_CV' : 0,  'PINARB_CV' : 0,  'MOIDOM_CV' : 0}
+  # TODO : parcourir les labels et créer le dictionnaire avec une boucle pour l'adapter au nombre d'espèces
+  dict = {'ImageName': [], 'MESCHA_A' : 0, 'ECUROU_A' : 0,  'VEREUR_A' : 0, 'MESBLE_A' : 0, 'PIEBAV_A' : 0, 'MESNON_A' : 0, 'SITTOR_A' : 0, 'ACCMOU_A' : 0, 'ROUGOR_A' : 0, 'TOUTUR_A' : 0, 'PINARB_A' : 0, 'MOIDOM_A' : 0, 'MULGRI_A':0, 'CAMPAG_A':0, 
+      	  'MESCHA_CV' : 0,  'ECUROU_CV' : 0,  'VEREUR_CV' : 0,  'MESBLE_CV' : 0,  'PIEBAV_CV' : 0,  'MESNON_CV' : 0,  'SITTOR_CV' : 0,  'ACCMOU_CV' : 0,  'ROUGOR_CV' : 0,  'TOUTUR_CV' : 0,  'PINARB_CV' : 0,  'MOIDOM_CV' : 0, 'MULGRI_CV':0, 'CAMPAG_CV':0,}
 
   # the array based representation of the image will be used later in order to prepare the
   # result image with boxes and labels on it.
@@ -269,44 +188,21 @@ def construct_evaluation_CSV(data, image_path):
   data = data.append(dict, ignore_index=True, sort=False)
   return data
 
-# TODO remove ?
-# Sur les N images aléatoires de test
-"""
-def inference_random_N_Images(test_images_dir, seuil, nb_img_inference):
-  elapsed_time = []
-  images_list = glob.glob(test_images_dir)
-  # Inférence sur les N images
-  for i in range(nb_img_inference):
-    image_path = random.choice(images_list)
-    elapsed_time = show_inference_perso(model, image_path, seuil)
-  # Temps moyen (en secondes) par image pour la détéction et classification
-  mean_elapsed = sum(elapsed_time) / float(len(elapsed_time))
-  print('Elapsed time: ' + str(mean_elapsed) + ' second per image')
-"""
-
-# Sur les N images de CHAQUE ESPECE de test
-def inference_random_N_Images_Especes(seuil, species_images, saveImg=None, espece=None):
-  elapsed_time = []
-  # Inférence sur les N images
-  for i in species_images:
-    image_path = os.getcwd() + '\\images\\test\\' + i
-    elapsed_time = show_inference_perso(model, image_path, seuil, saveImg = saveImg, espece = espece)
-
-  # Temps moyen (en secondes) par image pour la détéction et classification
-  mean_elapsed = sum(elapsed_time) / float(len(elapsed_time))
-  print('Elapsed time: ' + str(mean_elapsed) + ' second per image')
-
 #########################################################################
 ######################### Partie  pour les tests #########################
 #########################################################################
 #########################################################################
 # Chemins vers nos fichiers
 #########################################################################
-current_dir = os.getcwd()
-test_images_dir = current_dir + '\\images\\test\\'
-train_record_path = current_dir + '\\train.record'
-test_record_path = current_dir + '\\test.record'
-labelmap_path = current_dir + '\\annotations\\labelmap_12especes.pbtxt'  # la labelmap d'entrainement sous forme d'objets
+current_dir = os.getcwd() + '/workspace/training_demo/'  # modifier le chemin en fonction de l'emplacement du script SLURM (tf2_inference.slurm)
+test_images_dir = current_dir + '/images/test/'
+train_record_path = current_dir + '/annotations/train.record'
+test_record_path = current_dir + '/annotations/test.record'
+
+#labelmap_name = 'labelmap_12especes.pbtxt' # si on a les MESCHA : TrainV2 à V4 et TrainV6
+#labelmap_name = 'labelmap_sansMESCHA.pbtxt' # TrainV5 => TODO param  of program !
+labelmap_name = 'labelmap_14especes.pbtxt'
+labelmap_path = current_dir + '/annotations/' + labelmap_name  # la labelmap d'entrainement sous forme d'objets
 
 #########################################################################
 # Récupération des labels pour nos classes
@@ -334,8 +230,13 @@ handles.append(mpatches.Patch(color='red', label='Labels'))
 # Récupération de notre modèle CUSTOM
 #########################################################################
 tf.keras.backend.clear_session()
-exported_model_folder = "TF2_ExportedModel_TrainV8"  # TF2_EXPORTED_model_trainV4
-model = tf.saved_model.load(current_dir + '\\exported-models\\' + exported_model_folder + '\\saved_model')
+# TODO param of program !
+#exported_model_name = 'TF2_ExportedModel_TrainV8'
+#exported_model_name = 'SSD_320x320_trainV2'
+#exported_model_name = 'SSD_8'
+exported_model_name = 'SSD_64'
+exported_model_folder = "/exported-models/" + exported_model_name + "/saved_model"
+model = tf.saved_model.load(current_dir + exported_model_folder)
 
 #########################################################################
 # Récupération de toutes les images d'une classe donnée, et inférence sur
@@ -343,70 +244,32 @@ model = tf.saved_model.load(current_dir + '\\exported-models\\' + exported_model
 # Remarque : Appuyer sur la touche 'Q' ou fermer la fenêtre d'affichage
 # pour passer à l'image suivante
 #########################################################################
-# TODO ADAPTER au Train souhaité !
-#CSV_path = '_evalCSV/' + 'Evaluation1erSSD_TrainV2.csv'  # ou Evaluation1erSSD_TrainV4
-#CSV_path = '_evalCSV/' + 'Evaluation2ndSSD_TrainV8.csv'
-#CSV_path = '_evalCSV/' + 'EvaluationSSD_V8-RaspberryPi.csv'
-CSV_path = '_evalCSV/' + 'EvaluationSSD_V2-RaspberryPi.csv'
-
-# TODO : Code + propre avec les vars au dessus !!!
-def N_random_per_species(N_images, saveImg=None, constructCSV=None):
-  # Comptage des espèces et récupération des images par espèces
-  bird_species_train, bird_species_test = count_images_by_species()
-
-  # Inférence sur N images random de chaque espèce en TEST :
-  for espece in labels:
-    print('Espèce courante : ', espece)
-    seuil = 0.60
-    species_images = bird_species_test.get(espece)
-    try:
-      N_images_espece = random.sample(list(species_images), N_images)
-      #print(N_images_espece)
-    except ValueError:
-      # Si on veut + d'images aléatoire que ce qu'on en a réellement, on prend le maximum possible
-      N_images = len(list(species_images))
-      N_images_espece = random.sample(list(species_images), N_images)
-      #print(N_images_espece)
-
-    # Sauvegarde les images avec les prédictions et annotations => Masque l'affichage graphique pour gagner du temps
-    if saveImg:
-      inference_random_N_Images_Especes(seuil, N_images_espece, saveImg, espece)
-    elif constructCSV:
-      # TODO SUPPR
-      data = construct_evaluation_CSV(data, N_images_espece)
-    else:
-      # Ne sauvegarde pas les images avec les boxes prédites et annotées => affichage graphique des résultats
-      inference_random_N_Images_Especes(seuil, N_images_espece)
+# TODO : Adapter le nom du CSV généré !
+CSV_path = '/tmpdir/DONNEEST21001/tf2/workspace/training_demo/_evalCSV/' + 'Evaluation-SSD_batch8.csv'
 
 # TODO : passer en argument du programme les paramètres
 #N_images = 2
 N_images = len(os.listdir(test_images_dir))  # si on veut le faire sur toutes les images de test
 
-"""
-# Comptage des espèces annotées et détectées :
-#cols_order = ['ImageName', 'MESCHA_A', 'ECUROU_A',  'VEREUR_A', 'MESBLE_A', 'PIEBAV_A', 'MESNON_A', 'SITTOR_A', 'ACCMOU_A', 'ROUGOR_A', 'TOUTUR_A', 'PINARB_A', 'MOIDOM_A', 'MESCHA_CV', 'ECUROU_CV', 'VEREUR_CV', 'MESBLE_CV', 'PIEBAV_CV', 'MESNON_CV', 'SITTOR_CV', 'ACCMOU_CV', 'ROUGOR_CV', 'TOUTUR_CV', 'PINARB_CV', 'MOIDOM_CV']
+# Comptage des espèces annotées et détectées 
 data = pd.DataFrame()
 
 cpt = 0
-images_list = glob.glob('images\\test\\*.jpg')
+images_list = glob.glob(test_images_dir + '*.jpg')
 for img_path in images_list:
   if (cpt % 100) == 0:
     print('Progression : ', cpt, ' sur : ', len(images_list))
   data = construct_evaluation_CSV(data, img_path)
   cpt += 1
 
-# Si on veut construire le fichier CSV d'évaluation
-#N_random_per_species(N_images, None, True)  #TODO suppr
-
+# Construit le fichier CSV d'évaluation
 print('Saving CSV for evaluation ...')
 data.to_csv(CSV_path, sep=';', index=None)
-"""
 
 # Matrice de confusion à partir des CSV
-# TODO version graphique
 
 # Lecture du fichier CSV avec ';' comme délimiteur/séparateur
-# TODO CSV path ligne 351
+# TODO : Adapter le CSV path (ligne 351)
 test_df = pd.read_csv(CSV_path, sep=';')
 
 mean_ACC = []
@@ -430,48 +293,42 @@ for species in labels:
   unique_values = unique_values[1:]
 
   # Calcul de la matrice de confusion
-  cf_matrix = confusion_matrix(actual_list, predicted_list, labels=unique_values)
+  try:
+    cf_matrix = confusion_matrix(actual_list, predicted_list, labels=unique_values)
+    print('Confusion matrix : \n', cf_matrix)
 
-  # Affichage graphique de la matrice de confusion
-  ax = plt.subplot()
-  sns.heatmap(cf_matrix, annot=True, fmt='g', cmap='Blues', ax=ax);  #annot=True to annotate cells, ftm='g' to disable scientific notation
+    # classification report for precision, recall f1-score and accuracy
+    matrix = classification_report(actual_list, predicted_list, labels=unique_values, zero_division = 0)
+    print('Classification report : \n',matrix)
 
-  # labels, title and ticks
-  ax.set_xlabel('Nombre de prédictions');ax.set_ylabel('Nombre de vérités terrain'); 
-  ax.set_title('Matrice de confusion : ' + species); 
-  ax.xaxis.set_ticklabels(unique_values); ax.yaxis.set_ticklabels(unique_values);
-  plt.show()
+    # Calcul manuelle de l'Accuracy par classe
+    FP = cf_matrix.sum(axis=0) - np.diag(cf_matrix)  
+    FN = cf_matrix.sum(axis=1) - np.diag(cf_matrix)
+    TP = np.diag(cf_matrix)
+    TN = cf_matrix.sum() - (FP + FN + TP)
+    print('TP, FP, TN, FN = ', TP, FP, TN, FN)
 
-  # classification report for precision, recall f1-score and accuracy
-  matrix = classification_report(actual_list, predicted_list, labels=unique_values, zero_division = 0)
-  print('Classification report : \n',matrix)
+    # Overall accuracy
+    numerateur = (TP+TN)
+    denumerateur = (TP+FP+FN+TN)
+    if np.sum(denumerateur) != 0:
+      ACC = numerateur / denumerateur
+      mean_ACC.append(np.mean(ACC))
+    else:
+      # Si on n'a aucune détection pour une classe, on a une division par zéro donc on fixe la précision à 0 pour cette classe
+      ACC = 0.0
+      mean_ACC.append(ACC)
 
-  # Calcul manuelle de l'Accuracy par classe
-  FP = cf_matrix.sum(axis=0) - np.diag(cf_matrix)  
-  FN = cf_matrix.sum(axis=1) - np.diag(cf_matrix)
-  TP = np.diag(cf_matrix)
-  TN = cf_matrix.sum() - (FP + FN + TP)
-  print('TP, FP, TN, FN = ', TP, FP, TN, FN)
-
-  # Overall accuracy
-  numerateur = (TP+TN)
-  denumerateur = (TP+FP+FN+TN)
-  if np.sum(denumerateur) != 0:
-    ACC = numerateur / denumerateur
-    mean_ACC.append(np.mean(ACC))
-  else:
-    # Si on n'a aucune détection pour une classe, on a une division par zéro donc on fixe la précision à 0 pour cette classe
-    ACC = 0.0
-    mean_ACC.append(ACC)
-
-  accuracy = accuracy_score(actual_list, predicted_list)
-  precision = precision_score(actual_list, predicted_list, labels=unique_values, average='micro')
-  mean_precision.append(precision)
-  recall = recall_score(actual_list, predicted_list, labels=unique_values, average='micro')
-  mean_recall.append(precision)
-  print('Accuracy (cf. formule) : ', accuracy)
-  print('Precision: %.3f' % precision)
-  print('Recall: %.3f' % recall)
+    accuracy = accuracy_score(actual_list, predicted_list)
+    precision = precision_score(actual_list, predicted_list, labels=unique_values, average='micro')
+    mean_precision.append(precision)
+    recall = recall_score(actual_list, predicted_list, labels=unique_values, average='micro')
+    mean_recall.append(precision)
+    print('Accuracy (cf. formule) : ', accuracy)
+    print('Precision: %.3f' % precision)
+    print('Recall: %.3f' % recall)
+  except ValueError:
+    print("Pas de d'images de TEST dans ce split pour l'espèce courante !")
 
 print('ACCURACY MOYENNE : ', np.mean(mean_ACC))
 print('PRECISION MOYENNE : ', np.mean(mean_precision))

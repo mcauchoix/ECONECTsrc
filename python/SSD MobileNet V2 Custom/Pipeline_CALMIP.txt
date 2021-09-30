@@ -18,25 +18,12 @@ javaws xvpnc_1631653059.jnlp
 ssh -YX -p 11300 gimenez@127.0.0.1
 
 ** PIPELINE pour TF2 Object Detection **
-# D'abord demander une augmentation de quota au support, sinon on n'a pas assez d'espace
-# Versions disponibles des paquets
-module avail python
-module avail cuda
-module avail tensorflow
-
-# Environnements pré-configurés disponibles :
-conda env list
-
-#module purge
-#module load conda/4.9.2 cuda/11.2
-#conda create -p /tmpdir/DONNEEST21001/tensorflow --clone tensorflow-2.4.1
-#conda activate /tmpdir/DONNEEST21001/tensorflow
-
+# à n'executer que si 
 module purge
 module load conda/4.9.2
 module load cuda/11.2
-conda create -n tf2 --clone python-tools-3.9.5
-conda activate tf2
+conda create -p /users/t21001/partage/tf2 --clone python-tools-3.9.5
+conda activate /users/t21001/partage/tf2
 conda update --all
 
 ****************************************************************************************************************

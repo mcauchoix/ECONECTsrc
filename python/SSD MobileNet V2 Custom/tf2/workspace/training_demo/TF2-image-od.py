@@ -18,11 +18,11 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--model', help='Folder that the Saved Model is Located In',
                     default='exported-models/my_mobilenet_model')
 parser.add_argument('--labels', help='Where the Labelmap is Located',
-                    default='exported-models/my_mobilenet_model/saved_model/label_map.pbtxt')
+                    default='exported-models/my_mobilenet_model/saved_model/labelmap.pbtxt')
 parser.add_argument('--image', help='Name of the single image to perform detection on',
                     default='images/test/i-1e092ec6eabf47f9b85795a9e069181b.jpg')
 parser.add_argument('--threshold', help='Minimum confidence threshold for displaying detected objects',
-                    default=0.5)
+                    default=0.60)
                     
 args = parser.parse_args()
 # Enable GPU dynamic memory allocation
@@ -32,7 +32,6 @@ for gpu in gpus:
 
 # PROVIDE PATH TO IMAGE DIRECTORY
 IMAGE_PATHS = args.image
-
 
 # PROVIDE PATH TO MODEL DIRECTORY
 PATH_TO_MODEL_DIR = args.model
@@ -65,6 +64,7 @@ print('Done! Took {} seconds'.format(elapsed_time))
 
 category_index = label_map_util.create_category_index_from_labelmap(PATH_TO_LABELS,
                                                                     use_display_name=True)
+
 import numpy as np
 from PIL import Image
 import matplotlib.pyplot as plt
@@ -92,8 +92,7 @@ def load_image_into_numpy_array(path):
 print('Running inference for {}... '.format(IMAGE_PATHS), end='')
 
 image = cv2.imread(IMAGE_PATHS)
-image_rgb = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-imH, imW, _ = image.shape
+image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 image_expanded = np.expand_dims(image_rgb, axis=0)
 
 # The input needs to be a tensor, convert it using `tf.convert_to_tensor`.
@@ -114,35 +113,24 @@ detections['num_detections'] = num_detections
 
 # detection_classes should be ints.
 detections['detection_classes'] = detections['detection_classes'].astype(np.int64)
-scores = detections['detection_scores']
-boxes = detections['detection_boxes']
-classes = detections['detection_classes']
-count = 0
-for i in range(len(scores)):
-    if ((scores[i] > MIN_CONF_THRESH) and (scores[i] <= 1.0)):
-        #increase count
-        count += 1
-        # Get bounding box coordinates and draw box
-        # Interpreter can return coordinates that are outside of image dimensions, need to force them to be within image using max() and min()
-        ymin = int(max(1,(boxes[i][0] * imH)))
-        xmin = int(max(1,(boxes[i][1] * imW)))
-        ymax = int(min(imH,(boxes[i][2] * imH)))
-        xmax = int(min(imW,(boxes[i][3] * imW)))
-        
-        cv2.rectangle(image, (xmin,ymin), (xmax,ymax), (10, 255, 0), 2)
-        # Draw label
-        object_name = category_index[int(classes[i])]['name'] # Look up object name from "labels" array using class index
-        label = '%s: %d%%' % (object_name, int(scores[i]*100)) # Example: 'person: 72%'
-        labelSize, baseLine = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2) # Get font size
-        label_ymin = max(ymin, labelSize[1] + 10) # Make sure not to draw label too close to top of window
-        cv2.rectangle(image, (xmin, label_ymin-labelSize[1]-10), (xmin+labelSize[0], label_ymin+baseLine-10), (255, 255, 255), cv2.FILLED) # Draw white box to put label text in
-        cv2.putText(image, label, (xmin, label_ymin-7), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2) # Draw label text
-        
 
-cv2.putText (image,'Total Detections : ' + str(count),(10,25),cv2.FONT_HERSHEY_SIMPLEX,1,(70,235,52),2,cv2.LINE_AA)
+image_with_detections = image.copy()
+
+# SET MIN_SCORE_THRESH BASED ON YOU MINIMUM THRESHOLD FOR DETECTIONS
+viz_utils.visualize_boxes_and_labels_on_image_array(
+      image_with_detections,
+      detections['detection_boxes'],
+      detections['detection_classes'],
+      detections['detection_scores'],
+      category_index,
+      use_normalized_coordinates=True,
+      max_boxes_to_draw=200,
+      min_score_thresh=MIN_CONF_THRESH,
+      agnostic_mode=False)
+
 print('Done')
 # DISPLAYS OUTPUT IMAGE
-cv2.imshow('Object Counter', image)
+cv2.imshow('Object Detector', image_with_detections)
 # CLOSES WINDOW ONCE KEY IS PRESSED
 cv2.waitKey(0)
 # CLEANUP
