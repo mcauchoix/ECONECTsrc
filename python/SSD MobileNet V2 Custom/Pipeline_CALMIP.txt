@@ -49,7 +49,16 @@ protoc object_detection/protos/*.proto --python_out=.
 conda deactivate
 conda activate /tmpdir/DONNEEST21001/virtualenv_tf2
 cd /tmpdir/DONNEEST21001/tf2/models/research
-bash /tmpdir/DONNEEST21001/tf2/install_prerequisites.sh
+pip install cython
+pip install git+https://github.com/philferriere/cocoapi.git#subdirectory=PythonAPI
+cp object_detection/packages/tf2/setup.py .
+python -m pip install --user --use-feature=2020-resolver .
+pip install --upgrade tensorflow-gpu==2.5.0
+pip install IPython
+pip install seaborn
+pip install numpy==1.17.3 --user
+pip install -U scikit-learn
+pip install pandas
 
 # Teste si la configuration est correcte :
 cd /tmpdir/DONNEEST21001/example
