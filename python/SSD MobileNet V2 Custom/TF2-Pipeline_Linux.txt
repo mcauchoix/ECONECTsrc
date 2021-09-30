@@ -47,6 +47,34 @@
   ****************************************************************************************************************
 
   ****************************************************************************************************************
+  ************************ Téléchargement des dernières données annotées *****************************************
+  ****************************************************************************************************************
+  # Récupération des images
+
+  # Si p0133_bid_data présent
+  cd /Users/maximecauchoix/p0133_bird_data
+  git pull
+
+  # sinon
+  #installation git et module Large Files
+  git init
+  brew install git-lfs
+  #Clone Gitlab (une clé Ssh doit être crée au préalable)
+  git clone git@gitlab.dev.siconsult.fr:beeguard_RetD/p0133_bird/p0133_bird_data.git
+  
+ 
+  #si besoin de retélécharger les outils d'extraction de données, A faire une seule fois !!
+  git clone git@gitlab.dev.siconsult.fr:devops/tools/python-cvatclient.git
+  cd python-cvatclient
+  python3 -m venv venv
+  source venv/bin/activate
+  pip install -e .
+
+  # Download des annotations au format PASCAL VOC
+  python bin/downloadannotations.py -u  Maxime.econect -p "aeNi5yoo" -P 8 -f "PASCAL VOC 1.1"
+
+
+  ****************************************************************************************************************
   ************************ Phase de préparation du dataset pour l'entraînement du réseau *************************
   ****************************************************************************************************************
   
@@ -56,10 +84,21 @@
   # Créer les répertoires pour les images et les annotations
   mkdir -p /Users/maximecauchoix/Documents/ECONECT/ECONECTsrc/python/SSD\ MobileNet\ V2\ Custom/tf2/workspace/training_demo/images/JPEGImages
   mkdir -p /Users/maximecauchoix/Documents/ECONECT/ECONECTsrc/python/SSD\ MobileNet\ V2\ Custom/tf2/workspace/training_demo/images/Annotations
+
+  ************************ Version MAC OS *************************
+  # à partir du dossier parent de "raw_data" et "annotations"
+  cd /Users/maximecauchoix/p0133_bird_data/
+  find raw_data -iname "*.jpg" -exec mv {} /Users/maximecauchoix/Documents/ECONECT/ECONECTsrc/python/SSD\ MobileNet\ V2\ Custom/tf2/workspace/training_demo/images/JPEGImages \;
+
+  cd python-cvatclient/
+  find annotations -name "*.xml" -exec mv {} /Users/maximecauchoix/Documents/ECONECT/ECONECTsrc/python/SSD\ MobileNet\ V2\ Custom/tf2/workspace/training_demo/images/Annotations \;
+  ****************************************************************
   
+  ************************ Version LINUX *************************
   #  À partir du dossier parent de "raw_data" et "annotations"
   find raw_data -iname '*.jpg' -exec mv --backup=numbered -t /Users/maximecauchoix/Documents/ECONECT/ECONECTsrc/python/SSD\ MobileNet\ V2\ Custom/tf2/workspace/training_demo/images/JPEGImages {} +
   find annotations -name '*.xml' -exec mv --backup=numbered -t /Users/maximecauchoix/Documents/ECONECT/ECONECTsrc/python/SSD\ MobileNet\ V2\ Custom/tf2/workspace/training_demo/images/Annotations {} +
+  ****************************************************************
 
   # Supprimer les images/annotations illisibles de 0 ko
   cd /Users/maximecauchoix/Documents/ECONECT/ECONECTsrc/python/SSD\ MobileNet\ V2\ Custom/tf2/workspace/training_demo/images
@@ -79,18 +118,18 @@
   # Répartir les données de TRAIN et TEST ==> Contrôler la valeur de la seed (random_state) dans le fichier train_test_splitter.py
   # si on ne met pas de liste de TASKS en TEST
   # Note : Pour faire une commande sur plusieurs lignes : On met des "^" à la fin de chaque ligne sauf la dernière sur Windows ou des "\" sur Linux
-  python train_test_splitter.py ^
-    --annotations=../../workspace/training_demo/images/Annotations/ ^
-    --images=../../workspace/training_demo/images/JPEGImages/ ^
-    --testsize=0.2 ^
+  python train_test_splitter.py \
+    --annotations=../../workspace/training_demo/images/Annotations/ \
+    --images=../../workspace/training_demo/images/JPEGImages/ \
+    --testsize=0.2 \
     --outputdir=../../workspace/training_demo/images/
 
   # si on VEUT une liste de TASKS en TEST :
   # ou si on en exclut plusieurs --> -t balacet lab UPS
   python train_test_splitter.py ^
-    --annotations=../../workspace/training_demo/images/Annotations/ ^
-    --images=../../workspace/training_demo/images/JPEGImages/ ^
-    --outputdir=../../workspace/training_demo/images/ ^
+    --annotations=../../workspace/training_demo/images/Annotations/ \
+    --images=../../workspace/training_demo/images/JPEGImages/ \
+    --outputdir=../../workspace/training_demo/images/ \
     -t balacet
 
   # ATTENTION : Modifier/Créer une nouvelle labelmap.pbtxt avec toutes les espèces souhaitées !
@@ -98,16 +137,16 @@
   # Exemple : labelmap_12especes.pbtxt ou labelmap_14especes.pbtxt
 
   # Génération des fichiers CSV pour le comptage et TFRecords pour l'entrainement
-  python generate_tfrecord.py ^
-    -x /Users/maximecauchoix/Documents/ECONECT/ECONECTsrc/python/SSD\ MobileNet\ V2\ Custom/tf2/workspace/training_demo/images/train ^
-    -l /Users/maximecauchoix/Documents/ECONECT/ECONECTsrc/python/SSD\ MobileNet\ V2\ Custom/tf2/workspace/training_demo/annotations/labelmap_14especes.pbtxt ^
-    -o /Users/maximecauchoix/Documents/ECONECT/ECONECTsrc/python/SSD\ MobileNet\ V2\ Custom/tf2/workspace/training_demo/annotations/train.record ^
+  python generate_tfrecord.py \
+    -x /Users/maximecauchoix/Documents/ECONECT/ECONECTsrc/python/SSD\ MobileNet\ V2\ Custom/tf2/workspace/training_demo/images/train \
+    -l /Users/maximecauchoix/Documents/ECONECT/ECONECTsrc/python/SSD\ MobileNet\ V2\ Custom/tf2/workspace/training_demo/annotations/labelmap_14especes.pbtxt \
+    -o /Users/maximecauchoix/Documents/ECONECT/ECONECTsrc/python/SSD\ MobileNet\ V2\ Custom/tf2/workspace/training_demo/annotations/train.record \
     -c /Users/maximecauchoix/Documents/ECONECT/ECONECTsrc/python/SSD\ MobileNet\ V2\ Custom/tf2/workspace/training_demo/annotations/train.csv
 
-  python generate_tfrecord.py ^
-    -x /Users/maximecauchoix/Documents/ECONECT/ECONECTsrc/python/SSD\ MobileNet\ V2\ Custom/tf2/workspace/training_demo/images/test ^
-    -l /Users/maximecauchoix/Documents/ECONECT/ECONECTsrc/python/SSD\ MobileNet\ V2\ Custom/tf2/workspace/training_demo/annotations/labelmap_14especes.pbtxt ^
-    -o /Users/maximecauchoix/Documents/ECONECT/ECONECTsrc/python/SSD\ MobileNet\ V2\ Custom/tf2/workspace/training_demo/annotations/test.record ^
+  python generate_tfrecord.py \
+    -x /Users/maximecauchoix/Documents/ECONECT/ECONECTsrc/python/SSD\ MobileNet\ V2\ Custom/tf2/workspace/training_demo/images/test \
+    -l /Users/maximecauchoix/Documents/ECONECT/ECONECTsrc/python/SSD\ MobileNet\ V2\ Custom/tf2/workspace/training_demo/annotations/labelmap_14especes.pbtxt \
+    -o /Users/maximecauchoix/Documents/ECONECT/ECONECTsrc/python/SSD\ MobileNet\ V2\ Custom/tf2/workspace/training_demo/annotations/test.record \
     -c /Users/maximecauchoix/Documents/ECONECT/ECONECTsrc/python/SSD\ MobileNet\ V2\ Custom/tf2/workspace/training_demo/annotations/test.csv
 
   # Si on veut voir le nombre d'images par espèce à partir des fichiers CSV générés au dessus :

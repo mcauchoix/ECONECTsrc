@@ -170,11 +170,21 @@ mkdir SSD_Mbnet_v2_CVAT_07_09
 ****************************************************************************************************************
 cd /tmpdir/DONNEEST21001/tf2
 ****************************************************************************************************************
-# Lancement de l'entrainement :
+# ATTENTION : il faut modifier le dossier du modèle à entraîner ainsi que la labelmap 
+# dans le fichier pipeline.config, ainsi que dans le script SLURM 
+# Lancement de l'entrainement avec batch_size = 8 --> Temps ~= 50 min
 sbatch training.slurm
+
+# Lancement de l'entrainement avec batch_size = 64 --> Temps ~= 2h50
+sbatch training2.slurm
 
 # Exporter le modèle en TF2 puis TF Lite :
 sbatch export_model.slurm
+
+# Inférence qui sauvegarde les détections pour chaque espèce + Evaluation qui génère un fichier CSV et calcule les métriques
+# Temps inférence ~= 15-20 min
+# Temps d'évaluation ~= 35 min
+sbatch tf2_inference_evalCSV.slurm
 
 ****************************************************************************************************************
 ************************************* Commandes propres aux jobs CALMIP  ***************************************

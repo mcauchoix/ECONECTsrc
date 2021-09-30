@@ -87,11 +87,11 @@ def xml_to_csv(path):
             xmax = int(float(bbx.find('xmax').text))
             ymax = int(float(bbx.find('ymax').text))
             species = member.find('attributes')
-            label = species[3][1].text
-
-            filename_path = root.find('filename').text
-            filename = filename_path.split('/')[-1]
-            value = (filename,
+            try:
+            	label = species[3][1].text
+            	filename_path = root.find('filename').text
+            	filename = filename_path.split('/')[-1]
+            	value = (filename,
                      int(float(root.find('size')[0].text)),
                      int(float(root.find('size')[1].text)),
                      label,
@@ -100,8 +100,11 @@ def xml_to_csv(path):
                      xmax,
                      ymax
                      )
+            	xml_list.append(value)
+            except IndexError: # gestion des objects qui ne sont pas des espèces (exemple: band)
+            	print("pas de label"+ xml_file)
 
-            xml_list.append(value)
+            
 
     column_name = ['filename', 'width', 'height',
                    'class', 'xmin', 'ymin', 'xmax', 'ymax']
