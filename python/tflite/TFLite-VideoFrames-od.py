@@ -11,7 +11,9 @@ import sys
 import time
 from threading import Thread
 import importlib.util
+from datetime import datetime
 from datetime import timedelta
+import csv
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--model', help='Provide the path to the TFLite file, default is models/model.tflite',
@@ -100,6 +102,17 @@ counting_detections = dict.fromkeys(labels, 0)
 # Garde les N frames denières détections pour supprimer les faux positifs
 N_save = 5 # Par défaut, si on veut que l'oiseau y soit au moins 1 seconde, on fixe cette valeur à la variable "fps"
 
+# Pour le fichier CSV, qui a pour nom : CSV_nomVidéo (sans .mp4)
+CSV_path = os.getcwd() + '/CSV_' + video_name[:-4] + '.csv'
+print('CSV_path :', CSV_path)
+header = ['videotime', 'class', 'xmin', 'ymin', 'xmax', 'ymax']
+
+# Créé le fichier CSV en écriture
+with open(CSV_path, 'w', newline='') as f:
+    # Entête du fichier CSV seulement à la création du fichier
+    writer = csv.DictWriter(f, delimiter=';', fieldnames=header)
+    writer.writeheader()
+
 # Parcours de la vidéo frame par frame
 while(video.isOpened()):
     # Start timer (for calculating frame rate)
@@ -116,6 +129,10 @@ while(video.isOpened()):
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         frame_resized = cv2.resize(frame_rgb, (width, height))
         input_data = np.expand_dims(frame_resized, axis=0)
+        
+        # Sauvegarde le temps de la frame courante en secondes
+        milliseconds = video.get(cv2.CAP_PROP_POS_MSEC)
+        timestamp = timedelta(milliseconds=milliseconds)
         
         # Numéro de la frame courante
         frame_number = video.get(cv2.CAP_PROP_POS_FRAMES)
@@ -140,6 +157,10 @@ while(video.isOpened()):
         detected_classes = []
         detected_scores = []
         keep_frame = True
+        
+        # Pour le fichier CSV
+        rows = []
+        # Loop over all detections and draw detection box if confidence is above minimum threshold
         for i in range(len(scores)):
             if ((scores[i] > MIN_CONF_THRESH) and (scores[i] <= 1.0)):
 
@@ -171,6 +192,9 @@ while(video.isOpened()):
                 # Vérifie si l'espèce détectée n'est pas présente sur au moins N frames, on ne la garde pas
                 if counting_detections[object_name] < N_save :
                     keep_frame = False
+                    
+                # Données pour la/les nouvelle(s) ligne(s) pour le CSV
+                rows.append({'videotime': timestamp, 'class': object_name, 'xmin': xmin, 'ymin': ymin, 'xmax': xmax, 'ymax': ymax})
 
         # Calculate framerate
         t2 = cv2.getTickCount()
@@ -181,9 +205,6 @@ while(video.isOpened()):
         cv2.putText(frame,'FPS on Pi: {0:.2f}, Detection(s) count: {1}'.format(frame_rate_calc, str(current_count)),(15,25),cv2.FONT_HERSHEY_SIMPLEX,1,(0,255,55),2,cv2.LINE_AA)
         # Si on a détecté une espèce au moins : 
         if detected_classes and keep_frame :
-          # Sauvegarde le temps de la frame courante en secondes
-          milliseconds = video.get(cv2.CAP_PROP_POS_MSEC)
-          timestamp = timedelta(milliseconds=milliseconds)
           # Sauvegarde la frame avec les détections et le temps sur la vidéo (si ce temps n'est pas nul)
           # TODO les 5 ou 6 dernières frames ont un temps égal à 0.0 avec cv2 ???
           if milliseconds != 0.0 and keepDetections:
@@ -191,13 +212,30 @@ while(video.isOpened()):
             saved_frame_name = 'frame_' + str(int(frame_number)) + '.jpg'
             cv2.imwrite(os.path.join(frame_path, saved_frame_name), frame)
           elif not keepDetections:
-	    # Affiche les détections à la volée
+            # Affiche les détections à la volée
             cv2.imshow('Object detector', frame)
 
-        # Press 'q' to quit
-        if cv2.waitKey(0) == ord('q'):
-            break
+        # Ouverture du fichier CSV pour ajouter des données à la suite
+        with open(CSV_path, 'a', newline='') as f:
+            # Sauvegarde le nom de l'image, la/les espèce(s) et les coordonées des bounding boxes dans le CSV
+            writer = csv.DictWriter(f, delimiter=';', fieldnames=header)
+            # Si on a au moins une détection
+            if rows != []:
+                # Une ligne par espèce pour l'image courante
+                for l in rows:
+                    writer.writerow(l)
 
+        # Press 'q' to quit
+        if not keepDetections:
+            # Attend moins de temps pour sauvegarder les images/frames
+            if cv2.waitKey(1) == ord('q'):
+                break
+        else:
+            # Affiche une image par seconde (1000ms)
+            if cv2.waitKey(1000) == ord('q'):
+                break
+            
+    # Si c'est la fin de la vidéo
     else:
         video.release()
 

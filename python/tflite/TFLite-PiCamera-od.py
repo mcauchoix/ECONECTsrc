@@ -8,7 +8,8 @@ import cv2
 import numpy as np
 import sys
 import time
-import datetime
+from datetime import datetime
+import csv
 from threading import Thread
 import importlib.util
 
@@ -118,6 +119,17 @@ print('Running inference for PiCamera')
 videostream = VideoStream(resolution=(imW,imH),framerate=30).start()
 time.sleep(1)
 
+# Pour le fichier CSV, qui a pour nom : date (jour-mois-année) et heure de création
+timenow = datetime.now().strftime('%d-%m-%Y %Hh%M')
+CSV_path = os.getcwd() + '/CSV_' + timenow + '.csv'
+header = ['cameratime', 'class', 'xmin', 'ymin', 'xmax', 'ymax']
+
+# Créé le fichier CSV en écriture
+with open(CSV_path, 'w', newline='') as f:
+    # Entête du fichier CSV seulement à la création du fichier
+    writer = csv.DictWriter(f, delimiter=';', fieldnames=header)
+    writer.writeheader()
+
 #for frame1 in camera.capture_continuous(rawCapture, format="bgr",use_video_port=True):
 while True:
     # Start timer (for calculating frame rate)
@@ -126,6 +138,9 @@ while True:
 
     # Grab frame from video stream
     frame1 = videostream.read()
+    
+    # Date et heure de capture de la frame
+    timenow = datetime.now().strftime('%H:%M:%S')
 
     # Acquire frame and resize to expected shape [1xHxWx3]
     frame = frame1.copy()
@@ -146,7 +161,9 @@ while True:
     classes = interpreter.get_tensor(output_details[1]['index'])[0] # Class index of detected objects
     scores = interpreter.get_tensor(output_details[2]['index'])[0] # Confidence of detected objects
     #num = interpreter.get_tensor(output_details[3]['index'])[0]  # Total number of detected objects (inaccurate and not needed)
-
+    
+    # Pour le fichier CSV
+    rows = []
     # Loop over all detections and draw detection box if confidence is above minimum threshold
     for i in range(len(scores)):
         if ((scores[i] > MIN_CONF_THRESH) and (scores[i] <= 1.0)):
@@ -168,6 +185,15 @@ while True:
             cv2.rectangle(frame, (xmin, label_ymin-labelSize[1]-10), (xmin+labelSize[0], label_ymin+baseLine-10), (255, 255, 255), cv2.FILLED) # Draw white box to put label text in
             cv2.putText(frame, label, (xmin, label_ymin-7), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2) # Draw label text
             current_count+=1
+            
+            # Données pour la/les nouvelle(s) ligne(s) pour le CSV
+            rows.append({'cameratime': timenow, 'class': object_name, 'xmin': xmin, 'ymin': ymin, 'xmax': xmax, 'ymax': ymax})
+    
+    # Calculate framerate
+    t2 = cv2.getTickCount()
+    time1 = (t2-t1)/freq
+    frame_rate_calc= 1/time1
+            
     # Draw framerate in corner of frame
     cv2.putText(frame,'FPS: {0:.2f}'.format(frame_rate_calc),(15,25),cv2.FONT_HERSHEY_SIMPLEX,1,(0,255,55),2,cv2.LINE_AA)
     cv2.putText (frame,'Total Detection Count : ' + str(current_count),(15,65),cv2.FONT_HERSHEY_SIMPLEX,1,(0,255,55),2,cv2.LINE_AA)
@@ -175,22 +201,33 @@ while True:
     # Si on a au moins une détection et qu'on veut  les sauvegarder :
     if keepDetections :
         if current_count > 0 :
-            time_now = datetime.datetime.now().time()
+            time_now = datetime.now().time()
             saved_frame_name = 'frame_' + str(time_now) + '.jpg'
             cv2.imwrite(os.path.join(save_path, saved_frame_name), frame)
     # Sinon
     else :
-    	# All the results have been drawn on the image, now display the image
-    	cv2.imshow('Object detector', frame)
-
-    # Calculate framerate
-    t2 = cv2.getTickCount()
-    time1 = (t2-t1)/freq
-    frame_rate_calc= 1/time1
+        # All the results have been drawn on the image, now display the image
+        cv2.imshow('Object detector', frame)
+    
+    # Ouverture du fichier CSV pour ajouter des données à la suite
+    with open(CSV_path, 'a', newline='') as f:
+        # Sauvegarde le nom de l'image, la/les espèce(s) et les coordonées des bounding boxes dans le CSV
+        writer = csv.DictWriter(f, delimiter=';', fieldnames=header)
+        # Si on a au moins une détection
+        if rows != []:
+            # Une ligne par espèce pour l'image courante
+            for l in rows:
+                writer.writerow(l)
 
     # Press 'q' to quit
-    if cv2.waitKey(0) == ord('q'):
-        break
+    if not keepDetections:
+        # Attend moins de temps pour sauvegarder les images/frames
+        if cv2.waitKey(1) == ord('q'):
+            break
+    else:
+        # Affiche une image par seconde (1000ms)
+        if cv2.waitKey(1000) == ord('q'):
+            break
 
 # Clean up
 cv2.destroyAllWindows()

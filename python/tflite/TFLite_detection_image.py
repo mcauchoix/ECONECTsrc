@@ -21,8 +21,10 @@ import sys
 import glob
 import importlib.util
 import time
+from datetime import datetime
 from xml.etree import ElementTree
 import pandas as pd
+import csv
 
 # Define and parse input arguments
 parser = argparse.ArgumentParser()
@@ -145,10 +147,23 @@ input_mean = 127.5
 input_std = 127.5
 elapsed_time = []
 
+# Pour le fichier CSV, qui a pour nom : date (jour-mois-année) et heure de création
+timenow = datetime.now().strftime('%d-%m-%Y %Hh%M')
+CSV_path = CWD_PATH + '/CSV_' + timenow + '.csv'
+print('CSV_path :', CSV_path)
+header = ['filename', 'class', 'xmin', 'ymin', 'xmax', 'ymax']
+
+# Créé le fichier CSV en écriture
+with open(CSV_path, 'w', newline='') as f:
+    # Entête du fichier CSV seulement à la création du fichier
+    writer = csv.DictWriter(f, delimiter=';', fieldnames=header)
+    writer.writeheader()
+
 # Loop over every image and perform detection
 for image_path in images:
     # Load image and resize to expected shape [1xHxWx3]
     image = cv2.imread(image_path)
+    image_name = os.path.basename(image_path)
     image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     imH, imW, _ = image.shape 
     image_resized = cv2.resize(image_rgb, (width, height))
@@ -171,6 +186,8 @@ for image_path in images:
     classes = interpreter.get_tensor(output_details[1]['index'])[0] # Class index of detected objects
     scores = interpreter.get_tensor(output_details[2]['index'])[0] # Confidence of detected objects
     #num = interpreter.get_tensor(output_details[3]['index'])[0]  # Total number of detected objects (inaccurate and not needed)
+    # Pour le fichier CSV
+    rows = []
 
     # Loop over all detections and draw detection box if confidence is above minimum threshold
     for i in range(len(scores)):
@@ -193,18 +210,36 @@ for image_path in images:
             cv2.rectangle(image, (xmin, label_ymin-labelSize[1]-10), (xmin+labelSize[0], label_ymin+baseLine-10), (255, 255, 255), cv2.FILLED) # Draw white box to put label text in
             cv2.putText(image, label, (xmin, label_ymin-7), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2) # Draw label text
 
+            # Données pour la/les nouvelle(s) ligne(s) pour le CSV
+            rows.append({'filename': image_name, 'class': object_name, 'xmin': xmin, 'ymin': ymin, 'xmax': xmax, 'ymax': ymax})
+
     # Si on veut garder les détections :
     if keepDetections :
-        image_name = os.path.basename(image_path)
         cv2.imwrite(os.path.join(save_path, image_name), image)
     # Sinon
     else :
-    	# All the results have been drawn on the image, now display the image
-    	cv2.imshow('Object detector', image)
+        # All the results have been drawn on the image, now display the image
+        cv2.imshow('Object detector', image)
+    
+    # Ouverture du fichier CSV pour ajouter des données à la suite
+    with open(CSV_path, 'a', newline='') as f:
+        # Sauvegarde le nom de l'image, la/les espèce(s) et les coordonées des bounding boxes dans le CSV
+        writer = csv.DictWriter(f, delimiter=';', fieldnames=header)
+        # Si on a au moins une détection
+        if rows != []:
+            # Une ligne par espèce pour l'image courante
+            for l in rows:
+                writer.writerow(l)
 
-    # Press any key to continue to next image, or press 'q' to quit
-    if cv2.waitKey(0) == ord('q'):
-        break
+    # Press 'q' to quit
+    if not keepDetections:
+        # Attend moins de temps pour sauvegarder les images/frames
+        if cv2.waitKey(1) == ord('q'):
+            break
+    else:
+        # Affiche une image par seconde (1000ms)
+        if cv2.waitKey(1000) == ord('q'):
+            break
 
 # Prints mean elapsed time per detection
 if elapsed_time != [] :

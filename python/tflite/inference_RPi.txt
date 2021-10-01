@@ -34,11 +34,10 @@ bash install-prerequisites.sh
 
 python -c "import tflite_runtime as tf;print(tf.__version__)"  --> Devrait afficher 2.5.0
 
-# Récupérer le chemin vers le dossier d'images/vidéos à détecter pour les programmes Python ci-dessous.
-
 *************************************************************
    ******** Utilisation des modèles en embarqué ********
 *************************************************************
+# Récupérer le chemin vers le dossier d'images/vidéos à détecter pour les programmes Python ci-dessous.
 # A chaque fois qu'on ouvre un terminal
 cd Documents/tflite
 source bin/activate
@@ -48,7 +47,7 @@ source bin/activate
 
 # Pour l'inférence sur une image isolée :
 cd Documents/tflite
-python3 TFLite_detection_image.py --modeldir=models/modelV2.tflite --labels=models/labelmap.txt --image=test/2021-01-05-16-08-37.jpg
+python3 TFLite_detection_image.py --modeldir=models/modelV2.tflite --labels=models/labelmap.txt --image=videos/mescha1.jpg
 
 # Pour l'inférence sur les images de test : (inspiré de https://github.com/EdjeElectronics/TensorFlow-Lite-Object-Detection-on-Android-and-Raspberry-Pi)
 cd Documents/tflite
@@ -110,10 +109,6 @@ TFLite-PiCamera-od.py :
 
 TFLite_evaluation.py : mêmes paramètres que pour TFLite_detection_image.py
 
-*** Scripts supplémentaires ***
-TFLite_detection_stream.py : mêmes paramètres que pour TFLite-PiCamera-od.py
-TFLite-Video-od.py : mêmes paramètres que pour TFLite-VideoFrames-od.py
-
 *************************************************************
  *** Liste des scripts (avec leurs paramètres ci-dessus) ***
 *************************************************************
@@ -133,16 +128,6 @@ TFLite-PiCamera-od.py : Utilise la Pi Camera pour détecter en temps réel.
 TFLite_evaluation.py : Génère un fichier CSV (au même endroit que le script) pour calculer par la suite les métriques de performances (précision et recall) 
 		       de chaque espèce. Cela permet d'évaluer les entraînements de nos 2 modèles sur GPU avec le script tf2_matrice_confusion.py (car plus rapide sur GPU). 
 		       Les résultats sont sauvegardés manuellement dans un fichier Excel nommé "Precision_Recall_FromCSVManuel.xlsx".
-
-*************************************************************
- 	       *** Scripts supplémentaires ***
-*************************************************************
-TFLite-Video-od.py : Détection sur une seule vidéo (.mp4 ou autre selon opencv) en paramètre
-		     Compte et affiche les détections à la volée. (pas de sauvegarde de frames ici)
-		     ==> On utilise donc le script TFLite-VideoFrames-od.py.
-
-TFLite_detection_stream.py : Test de Thread pour augmenter les FPS de la Pi Camera en temps réel ===> Mêmes performances que le script TFLite-PiCamera-od.py. 
-		 	     ==> On utilise donc le script TFLite-PiCamera-od.py.
 
 
    
