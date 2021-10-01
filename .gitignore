@@ -1,5 +1,5 @@
-*.jpg
-*.png
+python/*.jpg
+python/*.png
 *.tfrecord
 python/SSD\ MobileNet\ V2\ Custom/tf2/workspace/training_demo/annotations/*.csv
 python/SSD\ MobileNet\ V2\ Custom/tf2/workspace/training_demo/exported-models/*

@@ -88,7 +88,7 @@ print('Durée de la vidéo : ', number_of_frames/fps, ' secondes')
 
 # Dossier pour sauvegarder les frames (le créé s'il n'existe pas) :
 frame_path = os.getcwd() + '/saved_frames/'
-if keepDetections and not os.path.exists(frame_path):
+if not os.path.exists(frame_path):
   os.mkdir(frame_path)
 
 # Les frames sont sauvegardées dans un dossier qui a le même nom que la vidéo courante

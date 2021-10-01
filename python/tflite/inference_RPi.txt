@@ -28,7 +28,7 @@ python3 -m venv tflite
 # ******** Fin section ******** #
 
 # A chaque fois qu'on ouvre un terminal
-cd Documents/tflite
+cd /home/pi/Documents/tflite
 source bin/activate
 bash install-prerequisites.sh
 

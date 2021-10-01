@@ -56,7 +56,7 @@ keepDetections = args.keepDetections
 
 # Si on garde les detections, créé un dossier pour les stocker
 save_path = os.getcwd() + '/saved_images/'
-if keepDetections and not os.path.exists(save_path) :
+if not os.path.exists(save_path) :
     os.mkdir(save_path)
 # Sinon, on supprime les anciennes images
 elif os.path.exists(save_path) and len(os.listdir(save_path)) > 0:

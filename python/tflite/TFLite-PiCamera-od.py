@@ -81,12 +81,11 @@ MIN_CONF_THRESH = float(args.threshold)
 # If we want to keep detections
 keepDetections = args.keepDetections
 save_path = os.getcwd() + '/saved_live/'
-if keepDetections and not os.path.exists(save_path) :
+if not os.path.exists(save_path) :
     os.mkdir(save_path)
 
 resW, resH = args.resolution.split('x')
 imW, imH = int(resW), int(resH)
-import time
 print('Loading model...', end='')
 start_time = time.time()
 
