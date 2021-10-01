@@ -42,6 +42,10 @@ python -c "import tflite_runtime as tf;print(tf.__version__)"  --> Devrait affic
 cd Documents/tflite
 source bin/activate
 
+# Sinon on peut ajouter la commande : 
+# source Documents/tflite/bin/activate
+# dans le fichier .bashrc pour activer l'environnement automatiquement 
+
 # Pour faire défiler les images, appuyer sur une flèche ou entrée
 # Pour stopper un script, appuyer sur la touche "Q" (Quit) ou CTRL+Z
 
